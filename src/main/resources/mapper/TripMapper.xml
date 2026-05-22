@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.TripDao">
+
+    <!-- 1. 명소 정보 등록 -->
+    <insert id="createAttraction" parameterType="com.ssafy.wswg.model.dto.AttractionDto">
+        INSERT INTO attractions (
+            content_id, title, content_type_id, area_code, si_gun_gu_code,
+            first_image1, first_image2, map_level, latitude, longitude,
+            tel, addr1, addr2, homepage, overview
+        ) VALUES (
+            #{contentId}, #{title}, #{contentTypeId}, #{areaCode}, #{siGunGuCode},
+            #{firstImage1}, #{firstImage2}, #{mapLevel}, #{latitude}, #{longitude},
+            #{tel}, #{addr1}, #{addr2}, #{homepage}, #{overview}
+        )
+    </insert>
+
+    <!-- 2. 명소 정보 단건 조회 -->
+    <!-- (Snake Case 컬럼을 Camel Case 필드에 자동으로 매핑하려면 MyBatis 설정에서 mapUnderscoreToCamelCase=true 권장) -->
+    <select id="readAttraction" parameterType="int" resultType="com.ssafy.wswg.model.dto.AttractionDto">
+        SELECT 
+            no, content_id AS contentId, title, content_type_id AS contentTypeId, 
+            area_code AS areaCode, si_gun_gu_code AS siGunGuCode, first_image1 AS firstImage1, 
+            first_image2 AS firstImage2, map_level AS mapLevel, latitude, longitude, 
+            tel, addr1, addr2, homepage, overview
+        FROM attractions 
+        WHERE no = #{no}
+    </select>
+
+    <!-- 3. 명소 정보 수정 -->
+    <update id="updateAttraction" parameterType="com.ssafy.wswg.model.dto.AttractionDto">
+        UPDATE attractions
+        SET 
+            content_id = #{contentId}, 
+            title = #{title}, 
+            content_type_id = #{contentTypeId}, 
+            area_code = #{areaCode}, 
+            si_gun_gu_code = #{siGunGuCode},
+            first_image1 = #{firstImage1}, 
+            first_image2 = #{firstImage2}, 
+            map_level = #{mapLevel}, 
+            latitude = #{latitude}, 
+            longitude = #{longitude},
+            tel = #{tel}, 
+            addr1 = #{addr1}, 
+            addr2 = #{addr2}, 
+            homepage = #{homepage}, 
+            overview = #{overview}
+        WHERE no = #{no}
+    </update>
+
+    <!-- 4. 명소 정보 삭제 -->
+    <delete id="deleteAttraction" parameterType="int">
+        DELETE FROM attractions 
+        WHERE no = #{no}
+    </delete>
+
+    <!-- 5. 명소 목록 조회 -->
+    <select id="readAttractions" resultType="com.ssafy.wswg.model.dto.AttractionDto">
+        SELECT 
+            no, content_id AS contentId, title, content_type_id AS contentTypeId, 
+            area_code AS areaCode, si_gun_gu_code AS siGunGuCode, first_image1 AS firstImage1, 
+            first_image2 AS firstImage2, map_level AS mapLevel, latitude, longitude, 
+            tel, addr1, addr2, homepage, overview
+        FROM attractions 
+        ORDER BY no DESC 
+        LIMIT 20
+    </select>
+
+    <!-- 6. 시도 조회 -->
+    <select id="readSidos" resultType="com.ssafy.wswg.model.dto.SidoDto">
+        SELECT 
+            sido_code AS sidoCode, 
+            sido_name AS sidoName 
+        FROM sidos 
+        ORDER BY sido_code
+    </select>
+
+    <!-- 7. 군구 조회 -->
+    <select id="readGuguns" parameterType="int" resultType="com.ssafy.wswg.model.dto.GugunDto">
+        SELECT 
+            sido_code AS sidoCode, 
+            gugun_code AS gugunCode, 
+            gugun_name AS gugunName 
+        FROM guguns 
+        WHERE sido_code = #{sidoCode} 
+        ORDER BY gugun_code
+    </select>
+
+</mapper>
