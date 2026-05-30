@@ -4,11 +4,11 @@ spring:
       client:
         registration:
           google :
-            client-id: "698284648502-3u9b455lddfvqo75g2qgqkjb0r33klc1.apps.googleusercontent.com"
-            client-secret: "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"
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
             scope: profile, email
           kakao :
-            client-id: "goMtyY2UhyP2G0eCMY2tWL4qHqGZNm8Y"
+            client-id: ${KAKAO_CLIENT_ID}
             client-name: "kakao"
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post
