@@ -23,9 +23,11 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
         Map<String, Object> attributes = oAuth2User.getAttributes();
+        String registrationId = userRequest.getClientRegistration().getRegistrationId();
 
-        String email = (String) attributes.get("email");
-        String name = (String) attributes.get("name");
+        String email = getEmail(registrationId, attributes);
+        String name = getName(registrationId, attributes);
+        String profileImageUrl = getProfileImageUrl(registrationId, attributes);
 
         UserDto userDto = userDao.findByEmail(email);
 
@@ -33,13 +35,60 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             userDto = UserDto.builder()
                     .email(email)
                     .name(name)
+                    .profileImageUrl(profileImageUrl)
                     .role(Role.USER).build();
             userDao.insertUser(userDto);
         } else {
             userDto.setName(name);
+            userDto.setProfileImageUrl(profileImageUrl);
             userDao.updateUser(userDto);
         }
 
         return new CustomOAuth2User(attributes, userDto);
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getEmail(String registrationId, Map<String, Object> attributes) {
+        if ("kakao".equals(registrationId)) {
+            Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+            String email = kakaoAccount == null ? null : (String) kakaoAccount.get("email");
+
+            if (email != null && !email.isBlank()) {
+                return email;
+            }
+
+            return attributes.get("id") + "@kakao.oauth";
+        }
+
+        return (String) attributes.get("email");
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getName(String registrationId, Map<String, Object> attributes) {
+        if ("kakao".equals(registrationId)) {
+            Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+            Map<String, Object> profile = kakaoAccount == null ? null : (Map<String, Object>) kakaoAccount.get("profile");
+            String nickname = profile == null ? null : (String) profile.get("nickname");
+
+            if (nickname != null && !nickname.isBlank()) {
+                return nickname;
+            }
+
+            return "kakao_" + attributes.get("id");
+        }
+
+        return (String) attributes.get("name");
+    }
+
+    @SuppressWarnings("unchecked")
+    private String getProfileImageUrl(String registrationId, Map<String, Object> attributes) {
+        if ("kakao".equals(registrationId)) {
+            Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
+            Map<String, Object> profile = kakaoAccount == null ? null : (Map<String, Object>) kakaoAccount.get("profile");
+
+            return profile == null ? null : (String) profile.get("profile_image_url");
+        }
+
+        return (String) attributes.get("picture");
     }
 }

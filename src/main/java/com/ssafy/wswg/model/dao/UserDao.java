@@ -5,13 +5,13 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface UserDao {
-    @Select("select id, email, name, role from users where email = #{email}")
+    @Select("select id, email, name, profile_image_url, role from users where email = #{email}")
     UserDto findByEmail(String email);
 
-    @Insert("insert into users (email, name, role) values (#{email}, #{name}, #{role})")
+    @Insert("insert into users (email, name, profile_image_url, role) values (#{email}, #{name}, #{profileImageUrl}, #{role})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insertUser(UserDto userDto);
 
-    @Update("update users set name= #{name} where email = #{email}")
+    @Update("update users set name = #{name}, profile_image_url = #{profileImageUrl} where email = #{email}")
     void updateUser(UserDto userDto);
 }
