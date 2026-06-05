@@ -43,7 +43,6 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         //TODO:: 프론트엔드로 리다이렉트할 주소 만들기
         String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/login/success")
-                .queryParam("token", tokenResponse.getAccessToken())
                 .queryParam("accessToken", tokenResponse.getAccessToken())
                         .build().toUriString();
 
