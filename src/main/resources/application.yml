@@ -40,6 +40,11 @@ spring:
     username: ssafy
     password: ssafy
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
 # 해당 패키지의 로그 레벨을 DEBUG로 설정해야 보입니다.
 logging:
   level:
@@ -60,5 +65,7 @@ mybatis:
 # jwt
 jwt:
   secret: wswgburiburilandwhdmlwoWkdWkdaosvhtmzhdxwkfrktlrlfqkfkfrpdy
-  #12시간
-  expiration: 43200000
+  #20분
+  expiration: 1200000
+  #14일
+  refresh-expiration: 1209600000

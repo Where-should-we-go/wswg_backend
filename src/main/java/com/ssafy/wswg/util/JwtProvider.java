@@ -13,25 +13,25 @@ public class JwtProvider {
 
     private final Key key;
     private final long expirationTime;
+    private final long refreshExpirationTime;
 
 
-    public JwtProvider(@Value("${jwt.secret}")String secretKey, @Value("${jwt.expiration}") long expirationTime) {
+    public JwtProvider(
+            @Value("${jwt.secret}")String secretKey,
+            @Value("${jwt.expiration}") long expirationTime,
+            @Value("${jwt.refresh-expiration}") long refreshExpirationTime
+    ) {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
         this.expirationTime = expirationTime;
+        this.refreshExpirationTime = refreshExpirationTime;
     }
 
     public String createAccessToken(Long userId, String email, String role) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationTime);
+        return createToken(userId, email, role, "access", null, expirationTime);
+    }
 
-        return Jwts.builder()
-                .setSubject(String.valueOf(userId)) // 토큰 주인 (보통 유저 PK ID)
-                .claim("email", email)             // 커스텀 데이터 (이메일)
-                .claim("role", role)               // 커스텀 데이터 (권한)
-                .setIssuedAt(now)                  // 토큰 발행 시간
-                .setExpiration(expiryDate)         // 토큰 만료 시간
-                .signWith(key, SignatureAlgorithm.HS256) // 암호화 알고리즘과 비밀키
-                .compact();
+    public String createRefreshToken(Long userId, String email, String role, long version) {
+        return createToken(userId, email, role, "refresh", version, refreshExpirationTime);
     }
 
     // 🔍 2. JWT 토큰이 유효한지 검증하는 메서드
@@ -64,6 +64,38 @@ public class JwtProvider {
 
     public String getRoleFromToken(String token) {
         return getClaims(token).get("role", String.class);
+    }
+
+    public String getTokenTypeFromToken(String token) {
+        return getClaims(token).get("type", String.class);
+    }
+
+    public Long getVersionFromToken(String token) {
+        return getClaims(token).get("version", Long.class);
+    }
+
+    public long getRefreshExpirationTime() {
+        return refreshExpirationTime;
+    }
+
+    private String createToken(Long userId, String email, String role, String type, Long version, long expirationTime) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationTime);
+
+        JwtBuilder builder = Jwts.builder()
+                .setSubject(String.valueOf(userId)) // 토큰 주인 (보통 유저 PK ID)
+                .claim("email", email)             // 커스텀 데이터 (이메일)
+                .claim("role", role)               // 커스텀 데이터 (권한)
+                .claim("type", type)               // access / refresh 구분
+                .setIssuedAt(now)                  // 토큰 발행 시간
+                .setExpiration(expiryDate)         // 토큰 만료 시간
+                .signWith(key, SignatureAlgorithm.HS256); // 암호화 알고리즘과 비밀키
+
+        if (version != null) {
+            builder.claim("version", version);
+        }
+
+        return builder.compact();
     }
 
     private Claims getClaims(String token) {
