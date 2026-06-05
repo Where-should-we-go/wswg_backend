@@ -53,12 +53,24 @@ public class JwtProvider {
 
     // 🧾 3. JWT 토큰에서 유저 ID(PK) 꺼내는 메서드
     public Long getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
+        Claims claims = getClaims(token);
+
+        return Long.parseLong(claims.getSubject());
+    }
+
+    public String getEmailFromToken(String token) {
+        return getClaims(token).get("email", String.class);
+    }
+
+    public String getRoleFromToken(String token) {
+        return getClaims(token).get("role", String.class);
+    }
+
+    private Claims getClaims(String token) {
+        return Jwts.parserBuilder()
                 .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
-
-        return Long.parseLong(claims.getSubject());
     }
 }

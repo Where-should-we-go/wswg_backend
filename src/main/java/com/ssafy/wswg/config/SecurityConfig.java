@@ -1,12 +1,14 @@
 package com.ssafy.wswg.config;
 
 import com.ssafy.wswg.security.CustomOAuth2UserService;
+import com.ssafy.wswg.security.JwtAuthenticationFilter;
 import com.ssafy.wswg.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -16,6 +18,7 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 
     @Bean
@@ -24,7 +27,7 @@ public class SecurityConfig {
 
 
         return http.authorizeHttpRequests((auth) -> auth
-                .requestMatchers("/", "login").permitAll()
+                .requestMatchers("/", "/login", "/oauth2/**", "/login/oauth2/**").permitAll()
                 .requestMatchers("/admin").hasRole("ADMIN")
                 .anyRequest().authenticated())
 
@@ -32,6 +35,7 @@ public class SecurityConfig {
                         .userInfoEndpoint((userInfo)-> userInfo
                                 .userService(customOAuth2UserService))
                                     .successHandler(oAuth2SuccessHandler))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 }
