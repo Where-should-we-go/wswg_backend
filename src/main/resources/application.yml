@@ -64,7 +64,7 @@ mybatis:
 
 # jwt
 jwt:
-  secret: wswgburiburilandwhdmlwoWkdWkdaosvhtmzhdxwkfrktlrlfqkfkfrpdy
+  secret: ${JWT_SECRET}
   #20분
   expiration: 1200000
   #14일
