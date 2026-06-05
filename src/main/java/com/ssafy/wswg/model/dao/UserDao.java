@@ -5,6 +5,9 @@ import org.apache.ibatis.annotations.*;
 
 @Mapper
 public interface UserDao {
+    @Select("select id, email, name, profile_image_url, role from users where id = #{id}")
+    UserDto findById(Long id);
+
     @Select("select id, email, name, profile_image_url, role from users where email = #{email}")
     UserDto findByEmail(String email);
 
