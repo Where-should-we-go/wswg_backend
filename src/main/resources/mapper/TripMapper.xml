@@ -9,11 +9,15 @@
     <insert id="createAttraction" parameterType="com.ssafy.wswg.model.dto.AttractionDto">
         INSERT INTO attractions (
             content_id, title, content_type_id, area_code, si_gun_gu_code,
-            first_image1, first_image2, map_level, latitude, longitude,
+            first_image1, first_image2, map_level, latitude, longitude, geom,
             tel, addr1, addr2, homepage, overview
         ) VALUES (
             #{contentId}, #{title}, #{contentTypeId}, #{areaCode}, #{siGunGuCode},
             #{firstImage1}, #{firstImage2}, #{mapLevel}, #{latitude}, #{longitude},
+            CASE
+                WHEN #{latitude} IS NULL OR #{longitude} IS NULL THEN NULL
+                ELSE ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)
+            END,
             #{tel}, #{addr1}, #{addr2}, #{homepage}, #{overview}
         )
     </insert>
@@ -44,6 +48,10 @@
             map_level = #{mapLevel}, 
             latitude = #{latitude}, 
             longitude = #{longitude},
+            geom = CASE
+                WHEN #{latitude} IS NULL OR #{longitude} IS NULL THEN NULL
+                ELSE ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)
+            END,
             tel = #{tel}, 
             addr1 = #{addr1}, 
             addr2 = #{addr2}, 
