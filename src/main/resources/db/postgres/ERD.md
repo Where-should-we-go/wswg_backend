@@ -72,13 +72,20 @@ erDiagram
         timestamptz created_at
         timestamptz updated_at "트리거 자동갱신"
     }
-    trip_attractions {
-        bigserial trip_attraction_id PK
+    trip_items {
+        bigserial item_id PK
         bigint trip_id FK
-        integer content_id FK "→ attractions.content_id"
+        integer content_id FK "→ attractions (nullable)"
+        varchar title "직접 입력 가능"
+        varchar item_type "관광/식당/숙박/이동/메모…"
+        double latitude
+        double longitude
+        geometry geom "GENERATED(lat,lng) GIST"
         integer visit_order
         date visit_date
         time visit_time
+        jsonb properties "🌟 자유 필드 (GIN)"
+        timestamptz updated_at "트리거"
     }
     trip_region_snapshots {
         bigserial snapshot_id PK
@@ -90,7 +97,7 @@ erDiagram
     trip_media {
         bigserial media_id PK
         bigint trip_id FK
-        integer content_id FK "→ attractions.content_id"
+        bigint item_id FK "→ trip_items (nullable, SET NULL)"
         bigint user_id FK "nullable, ON DELETE SET NULL"
         varchar media_type "PHOTO|AUDIO|VIDEO (CHECK)"
         text media_url
@@ -110,14 +117,14 @@ erDiagram
     users ||--o{ trips : "1:N (개인)"
     groups ||--o{ trips : "1:N (모임)"
 
-    trips ||--o{ trip_attractions : "1:N"
-    attractions ||--o{ trip_attractions : "1:N (content_id)"
+    trips ||--o{ trip_items : "1:N"
+    attractions ||--o| trip_items : "0:N (content_id, 선택)"
 
     trips ||--o{ trip_region_snapshots : "1:N"
     sidos ||--o{ trip_region_snapshots : "1:N (sido_code FK)"
 
     trips ||--o{ trip_media : "1:N"
-    attractions ||--o{ trip_media : "1:N (content_id)"
+    trip_items ||--o{ trip_media : "0:N (item_id)"
     users ||--o{ trip_media : "1:N (업로더, nullable)"
 ```
 
@@ -137,9 +144,9 @@ erDiagram
 | groups | 모임 (권한 평면 — role 없음) |
 | user_group | UNIQUE(user_id, group_id) |
 | trips | **XOR CHECK** + 날짜 CHECK + **updated_at 트리거** |
-| trip_attractions | FK→attractions.content_id, 중복 허용 |
+| trip_items | **유연 항목**(노션식): content_id nullable + title/item_type/자체좌표 + **properties JSONB(GIN)**, CHECK(content_id 또는 title) |
 | trip_region_snapshots | surrogate PK + gugun nullable + COALESCE 유니크 (비정규화 캐시) |
-| trip_media | **metadata JSONB(GIN)** + geom(GIST), user_id SET NULL |
+| trip_media | **item_id→trip_items**, metadata JSONB(GIN) + geom(GIST), user_id SET NULL |
 
 ---
 
@@ -149,7 +156,8 @@ erDiagram
 2. **guguns 복합 PK** → attractions 복합 FK. 단 snapshots는 sido만 FK(구군 미상 허용).
 3. **자식 FK 타깃 = `attractions.content_id`** (`NOT NULL UNIQUE`).
 4. **좌표 = 3NF**: lat/lng가 단일 출처, `geom`은 **GENERATED**(자동 파생) → 동기화 불필요. trip_media.geom은 촬영 좌표(직접 입력).
-5. **JSONB는 `trip_media.metadata` 한 곳** (GIN). 나머지 정형.
+5. **JSONB는 2곳**: `trip_media.metadata`(미디어 메타), `trip_items.properties`(노션식 자유 필드). 둘 다 GIN 인덱스. 나머지 정형.
+9. **`trip_items`는 유연 데이터 단위**: 관광지 링크(content_id)는 **선택**, 자유 필드는 `properties`. 같은 데이터를 일정/지도/갤러리 등 **여러 뷰**로 렌더. 미디어가 붙으면 자연스럽게 "계획 → 기록"으로 전환.
 6. **모임 권한 = 평면**(멤버 동일 권한, role/owner 컬럼 없음).
 7. **삭제 정책**: 개인여행=유저 cascade / 모임여행 미디어=업로더 SET NULL(보존).
 8. 타입: PK=BIGSERIAL, 시각=TIMESTAMPTZ(단 users.created_at=DATE 현행), 이미지/URL=TEXT.
