@@ -63,4 +63,22 @@ public class AuthController {
                 .header("Set-Cookie", refreshTokenCookie.toString())
                 .body(new AccessTokenResponseDto(tokenResponse.getAccessToken()));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(Authentication authentication) {
+        Long userId = resolveUserId(authentication);
+        refreshTokenService.deleteRefreshToken(userId);
+
+        ResponseCookie expiredRefreshTokenCookie = ResponseCookie.from("refreshToken", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/auth/refresh")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+
+        return ResponseEntity.noContent()
+                .header("Set-Cookie", expiredRefreshTokenCookie.toString())
+                .build();
+    }
 }
