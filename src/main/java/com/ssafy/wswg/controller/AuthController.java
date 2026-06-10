@@ -7,6 +7,7 @@ import com.ssafy.wswg.model.dao.UserDao;
 import com.ssafy.wswg.model.service.RefreshTokenService;
 import com.ssafy.wswg.security.CustomOAuth2User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 
@@ -35,6 +37,10 @@ public class AuthController {
     }
 
     private Long resolveUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다.");
+        }
+
         Object principal = authentication.getPrincipal();
 
         if (principal instanceof Long userId) {
@@ -42,10 +48,14 @@ public class AuthController {
         }
 
         if (principal instanceof CustomOAuth2User oAuth2User) {
-            return oAuth2User.getUserDto().getId();
+            Long userId = oAuth2User.getUserDto().getId();
+
+            if (userId != null) {
+                return userId;
+            }
         }
 
-        throw new IllegalStateException("지원하지 않는 인증 정보입니다.");
+        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "유효하지 않은 인증 정보입니다.");
     }
 
     @PostMapping("/refresh")
