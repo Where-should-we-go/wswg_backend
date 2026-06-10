@@ -1,4 +1,7 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
+
   security:
     oauth2:
       client:
@@ -35,10 +38,10 @@ spring:
 
   # 1. 데이터베이스 연결 설정 (DataSource)
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/ssafy_trip?serverTimezone=Asia/Seoul&useSSL=false
-    username: ssafy
-    password: ssafy
+    driver-class-name: org.postgresql.Driver
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:55432/wswg}
+    username: ${POSTGRES_USER:wswg}
+    password: ${POSTGRES_PASSWORD:wswg}
 
   data:
     redis:
