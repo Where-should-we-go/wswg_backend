@@ -3,10 +3,10 @@
 대상 DB: `jdbc:postgresql://localhost:55432/wswg` (application.yml 기준)
 
 **파일**
-- `schema.sql` — 전체 스키마 (11 테이블 + PostGIS + 트리거)
+- `schema.sql` — 전체 스키마 (9 테이블 + PostGIS + 트리거)
 - `ERD.md` — ERD 다이어그램·관계·확정 규칙
 - `데이터사전.md` — 필드 단위 데이터 사전
-- `여행기록도메인.md` — trip_items·trip_media 시나리오 정리
+- `여행기록도메인.md` — trips.data·group_region_media 시나리오 정리
 
 > ⚠️ `schema.sql`은 `CREATE TABLE IF NOT EXISTS` 라서 **이미 만들어진 테이블에는 변경이 반영되지 않습니다.**
 > `geom GENERATED`·`content_id NOT NULL UNIQUE` 같은 변경은 **fresh 재생성**이 필요합니다.
@@ -36,7 +36,7 @@ PGPASSWORD=wswg psql -h localhost -p 55432 -U wswg -d wswg -f schema.sql
 ```sql
 -- 로컬에서 직접 실행 (운영 DB 금지)
 DROP TABLE IF EXISTS
-    trip_media, trip_region_snapshots, trip_items, trips,
+    group_region_media, trips,
     user_group, groups, attractions, contenttypes, guguns, sidos, users CASCADE;
 DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 ```
@@ -45,7 +45,7 @@ DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 ## 3) 검증
 
 ```sql
-\dt   -- 테이블 11개 확인
+\dt   -- 테이블 9개 확인
 
 -- 생성 컬럼(geom) 자동 생성 확인
 INSERT INTO sidos VALUES (1,'서울');
