@@ -34,3 +34,7 @@ build/
 
 .env
 .DS_Store
+
+### DB ###
+# 파괴적 초기화 스크립트 — 커밋 금지 (footgun 방지, 로컬 전용). 초기화는 README §2 참고
+**/db/postgres/reset.sql
