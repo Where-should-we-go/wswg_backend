@@ -75,8 +75,12 @@ CREATE INDEX IF NOT EXISTS idx_attractions_geom         ON attractions USING GIS
 CREATE TABLE IF NOT EXISTS groups (
     group_id   BIGSERIAL PRIMARY KEY,
     group_name VARCHAR(100) NOT NULL,
+    owner_id   BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+ALTER TABLE groups
+    ADD COLUMN IF NOT EXISTS owner_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_groups_owner ON groups(owner_id);
 
 CREATE TABLE IF NOT EXISTS user_group (
     user_group_id BIGSERIAL PRIMARY KEY,
