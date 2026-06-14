@@ -1,0 +1,75 @@
+# 테스트 전용 설정.
+# DataSource는 @ServiceConnection이 Testcontainers PostGIS 컨테이너로 자동 연결한다.
+# schema.sql 적용은 Spring(spring.sql.init)이 아니라 컨테이너 init 메커니즘이 담당한다:
+# AbstractPostgisIntegrationTest가 schema.sql을 /docker-entrypoint-initdb.d/에 마운트하면
+# postgres 이미지가 최초 기동 시 진짜 psql로 실행한다. spring.sql.init은 PL/pgSQL의
+# '$$' 달러쿼팅을 ';' 단위 분할로 깨뜨려 'Unterminated dollar quote'로 실패하므로 쓰지 않는다.
+spring:
+  application:
+    name: wswg-test
+
+  # 운영 application.yml의 .env import 제거: 테스트는 env 파일에 의존하지 않는다.
+  config:
+    import: ""
+
+  # OAuth2/Redis 자동설정은 '유지'한다 (이전엔 exclude했으나 풀 컨텍스트가 깨졌다).
+  #
+  # 이유:
+  #   - SecurityConfig.filterChain()이 oauth2Login(...)을 호출하므로 컨텍스트는
+  #     ClientRegistrationRepository 빈을 요구한다. 아래 더미 registration이 있으면
+  #     OAuth2ClientAutoConfiguration이 그 빈을 만들어준다.
+  #   - RefreshTokenService(@Service, 컴포넌트 스캔됨)가 StringRedisTemplate을
+  #     생성자 주입받으므로 RedisAutoConfiguration이 살아 있어야 한다. 더미값으로
+  #     localhost:6379를 가리키지만, StringRedisTemplate은 lazy 연결이라 기동 시
+  #     실제 Redis에 접속하지 않는다(첫 사용 시점에만 연결). 테스트는 Redis를
+  #     호출하지 않으므로 컨텍스트 로드는 통과한다.
+
+  # 더미 OAuth2 client registration: env 플레이스홀더 대신 고정 더미 문자열.
+  # ClientRegistrationRepository 빈 생성이 목적이지 실제 OAuth 호출은 하지 않는다.
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: test-google-client-id
+            client-secret: test-google-client-secret
+            scope: profile, email
+          kakao:
+            client-id: test-kakao-client-id
+            client-name: "kakao"
+            authorization-grant-type: authorization_code
+            client-authentication-method: none
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            scope:
+              - profile_nickname
+              - account_email
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+  # Redis 더미 연결 정보(기동 시 연결하지 않음 — StringRedisTemplate은 lazy).
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# MyBatis: 운영과 동일하게 snake_case -> camelCase 매핑, null setter 호출
+mybatis:
+  type-aliases-package: com.ssafy.wswg.*.dto
+  mapper-locations: classpath:mapper/**/*.xml
+  configuration:
+    call-setters-on-nulls: true
+    map-underscore-to-camel-case: true
+
+# 테스트에서 사용하지 않는 운영 키들의 placeholder (컨텍스트 로드용 더미)
+jwt:
+  secret: test-secret-test-secret-test-secret-test-secret
+  expiration: 1200000
+  refresh-expiration: 1209600000
+
+logging:
+  level:
+    com.ssafy.wswg: INFO

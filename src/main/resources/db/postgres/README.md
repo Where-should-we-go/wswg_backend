@@ -3,7 +3,7 @@
 대상 DB: `jdbc:postgresql://localhost:55432/wswg` (application.yml 기준)
 
 **파일**
-- `schema.sql` — 전체 스키마 (9 테이블 + PostGIS + 트리거)
+- `schema.sql` — 전체 스키마 (9 테이블 + PostGIS + 트리거 + contenttypes 8종 시드)
 - `ERD.md` — ERD 다이어그램·관계·확정 규칙
 - `데이터사전.md` — 필드 단위 데이터 사전
 - `여행기록도메인.md` — trips.data·group_region_media 시나리오 정리
@@ -51,7 +51,7 @@ DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 INSERT INTO sidos VALUES (1,'서울');
 INSERT INTO guguns VALUES (1,1,'종로구');
 INSERT INTO contenttypes VALUES (12,'관광지');
-INSERT INTO attractions (content_id,title,content_type_id,area_code,si_gun_gu_code,latitude,longitude)
+INSERT INTO attractions (content_id,title,content_type_id,sido_code,gugun_code,latitude,longitude)
 VALUES (126508,'경복궁',12,1,1,37.5796,126.9770);
 SELECT content_id, ST_AsText(geom) FROM attractions WHERE content_id=126508;
 -- → POINT(126.977 37.5796) 자동 생성되면 성공

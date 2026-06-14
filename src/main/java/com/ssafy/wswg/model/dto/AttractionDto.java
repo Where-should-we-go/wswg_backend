@@ -16,8 +16,8 @@ public class AttractionDto {
     private Integer contentId;
     private String title;
     private Integer contentTypeId;
-    private Integer areaCode;
-    private Integer siGunGuCode;
+    private Integer sidoCode;
+    private Integer gugunCode;
     private String firstImage1;
     private String firstImage2;
     private Integer mapLevel;

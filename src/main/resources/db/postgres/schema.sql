@@ -43,9 +43,8 @@ CREATE TABLE IF NOT EXISTS attractions (
     content_id INTEGER NOT NULL UNIQUE,   -- TourAPI 고유키, trips.data가 소프트 참조
     title VARCHAR(255) NOT NULL,
     content_type_id INTEGER REFERENCES contenttypes(content_type_id),
-    -- 명칭 매핑: area_code = sido_code, si_gun_gu_code = gugun_code (TourAPI 원문 유지)
-    area_code INTEGER REFERENCES sidos(sido_code),
-    si_gun_gu_code INTEGER,
+    sido_code INTEGER REFERENCES sidos(sido_code),   -- 법정동 시도코드(TourAPI lDongRegnCd; 11=서울)
+    gugun_code INTEGER,                              -- 법정동 시군구코드(lDongSignguCd; 110=종로구)
     first_image1 TEXT,
     first_image2 TEXT,
     map_level INTEGER,
@@ -60,10 +59,10 @@ CREATE TABLE IF NOT EXISTS attractions (
     homepage TEXT,
     overview TEXT,
     CONSTRAINT fk_attractions_guguns
-        FOREIGN KEY (area_code, si_gun_gu_code)
+        FOREIGN KEY (sido_code, gugun_code)
         REFERENCES guguns(sido_code, gugun_code)
 );
-CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(area_code, si_gun_gu_code);
+CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(sido_code, gugun_code);
 CREATE INDEX IF NOT EXISTS idx_attractions_content_type ON attractions(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_attractions_title        ON attractions(title);
 CREATE INDEX IF NOT EXISTS idx_attractions_geom         ON attractions USING GIST(geom);
@@ -140,3 +139,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_group_region_media
     ON group_region_media (group_id, sido_code, COALESCE(gugun_code, -1));
 CREATE INDEX IF NOT EXISTS idx_grm_group     ON group_region_media(group_id);
 CREATE INDEX IF NOT EXISTS idx_grm_geom_gist ON group_region_media USING GIST (geom);
+
+-- ============================================================
+-- 정적 시드: TourAPI 콘텐츠타입 8종 (TourAPI v4.4 ContentTypeId 코드표)
+--   attractions.content_type_id FK 대상이므로 관광지 적재(A-3) 전에 채워야 한다.
+--   고정 8종이라 API가 아니라 정적 시드로 적재. 멱등(ON CONFLICT DO NOTHING).
+-- ============================================================
+INSERT INTO contenttypes (content_type_id, content_type_name) VALUES
+    (12, '관광지'),
+    (14, '문화시설'),
+    (15, '축제공연행사'),
+    (25, '여행코스'),
+    (28, '레포츠'),
+    (32, '숙박'),
+    (38, '쇼핑'),
+    (39, '음식점')
+ON CONFLICT (content_type_id) DO NOTHING;
