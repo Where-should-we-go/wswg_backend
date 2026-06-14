@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.GroupDao">
+
+    <insert id="createGroup"
+            parameterType="com.ssafy.wswg.model.dto.GroupDto"
+            useGeneratedKeys="true"
+            keyProperty="groupId"
+            keyColumn="group_id">
+        INSERT INTO groups (group_name, owner_id)
+        VALUES (#{groupName}, #{ownerId})
+    </insert>
+
+    <insert id="addMember">
+        INSERT INTO user_group (group_id, user_id)
+        VALUES (#{groupId}, #{userId})
+        ON CONFLICT (user_id, group_id) DO NOTHING
+    </insert>
+
+    <select id="readGroupsByUserId" resultType="com.ssafy.wswg.model.dto.GroupDto">
+        SELECT
+            g.group_id,
+            g.group_name,
+            g.owner_id,
+            g.created_at,
+            ug.joined_at,
+            COUNT(ug_all.user_id)::integer AS member_count
+        FROM groups g
+        INNER JOIN user_group ug
+            ON ug.group_id = g.group_id
+           AND ug.user_id = #{userId}
+        LEFT JOIN user_group ug_all
+            ON ug_all.group_id = g.group_id
+        GROUP BY g.group_id, g.group_name, g.owner_id, g.created_at, ug.joined_at
+        ORDER BY ug.joined_at DESC, g.group_id DESC
+    </select>
+
+    <select id="readGroupById" resultType="com.ssafy.wswg.model.dto.GroupDto">
+        SELECT
+            g.group_id,
+            g.group_name,
+            g.owner_id,
+            g.created_at,
+            ug.joined_at,
+            COUNT(ug_all.user_id)::integer AS member_count
+        FROM groups g
+        INNER JOIN user_group ug
+            ON ug.group_id = g.group_id
+           AND ug.user_id = #{userId}
+        LEFT JOIN user_group ug_all
+            ON ug_all.group_id = g.group_id
+        WHERE g.group_id = #{groupId}
+        GROUP BY g.group_id, g.group_name, g.owner_id, g.created_at, ug.joined_at
+    </select>
+
+    <select id="countGroupOwner" resultType="int">
+        SELECT COUNT(*)
+        FROM groups
+        WHERE group_id = #{groupId}
+          AND owner_id = #{userId}
+    </select>
+
+    <update id="updateGroupName">
+        UPDATE groups
+        SET group_name = #{groupName}
+        WHERE group_id = #{groupId}
+    </update>
+
+    <delete id="deleteGroup">
+        DELETE FROM groups
+        WHERE group_id = #{groupId}
+    </delete>
+
+</mapper>
