@@ -51,7 +51,7 @@ DROP FUNCTION IF EXISTS set_updated_at() CASCADE;
 INSERT INTO sidos VALUES (1,'서울');
 INSERT INTO guguns VALUES (1,1,'종로구');
 INSERT INTO contenttypes VALUES (12,'관광지');
-INSERT INTO attractions (content_id,title,content_type_id,area_code,si_gun_gu_code,latitude,longitude)
+INSERT INTO attractions (content_id,title,content_type_id,sido_code,gugun_code,latitude,longitude)
 VALUES (126508,'경복궁',12,1,1,37.5796,126.9770);
 SELECT content_id, ST_AsText(geom) FROM attractions WHERE content_id=126508;
 -- → POINT(126.977 37.5796) 자동 생성되면 성공

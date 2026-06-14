@@ -43,9 +43,8 @@ CREATE TABLE IF NOT EXISTS attractions (
     content_id INTEGER NOT NULL UNIQUE,   -- TourAPI 고유키, trips.data가 소프트 참조
     title VARCHAR(255) NOT NULL,
     content_type_id INTEGER REFERENCES contenttypes(content_type_id),
-    -- 명칭 매핑: area_code = sido_code, si_gun_gu_code = gugun_code (TourAPI 원문 유지)
-    area_code INTEGER REFERENCES sidos(sido_code),
-    si_gun_gu_code INTEGER,
+    sido_code INTEGER REFERENCES sidos(sido_code),   -- 법정동 시도코드(TourAPI lDongRegnCd; 11=서울)
+    gugun_code INTEGER,                              -- 법정동 시군구코드(lDongSignguCd; 110=종로구)
     first_image1 TEXT,
     first_image2 TEXT,
     map_level INTEGER,
@@ -60,10 +59,10 @@ CREATE TABLE IF NOT EXISTS attractions (
     homepage TEXT,
     overview TEXT,
     CONSTRAINT fk_attractions_guguns
-        FOREIGN KEY (area_code, si_gun_gu_code)
+        FOREIGN KEY (sido_code, gugun_code)
         REFERENCES guguns(sido_code, gugun_code)
 );
-CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(area_code, si_gun_gu_code);
+CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(sido_code, gugun_code);
 CREATE INDEX IF NOT EXISTS idx_attractions_content_type ON attractions(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_attractions_title        ON attractions(title);
 CREATE INDEX IF NOT EXISTS idx_attractions_geom         ON attractions USING GIST(geom);
