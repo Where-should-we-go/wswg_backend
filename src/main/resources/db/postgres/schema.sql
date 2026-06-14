@@ -139,3 +139,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_group_region_media
     ON group_region_media (group_id, sido_code, COALESCE(gugun_code, -1));
 CREATE INDEX IF NOT EXISTS idx_grm_group     ON group_region_media(group_id);
 CREATE INDEX IF NOT EXISTS idx_grm_geom_gist ON group_region_media USING GIST (geom);
+
+-- ============================================================
+-- 정적 시드: TourAPI 콘텐츠타입 8종 (TourAPI v4.4 ContentTypeId 코드표)
+--   attractions.content_type_id FK 대상이므로 관광지 적재(A-3) 전에 채워야 한다.
+--   고정 8종이라 API가 아니라 정적 시드로 적재. 멱등(ON CONFLICT DO NOTHING).
+-- ============================================================
+INSERT INTO contenttypes (content_type_id, content_type_name) VALUES
+    (12, '관광지'),
+    (14, '문화시설'),
+    (15, '축제공연행사'),
+    (25, '여행코스'),
+    (28, '레포츠'),
+    (32, '숙박'),
+    (38, '쇼핑'),
+    (39, '음식점')
+ON CONFLICT (content_type_id) DO NOTHING;
