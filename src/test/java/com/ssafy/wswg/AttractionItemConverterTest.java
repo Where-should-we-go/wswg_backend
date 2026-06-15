@@ -188,4 +188,16 @@ class AttractionItemConverterTest {
         empty.setModifiedtime("");
         assertThat(convert(empty).attractions().get(0).getModifiedTime()).isNull();
     }
+
+    @Test
+    @DisplayName("길이 초과: title>255 / tel>100 은 절단(전체 트랜잭션 깨짐 방지)")
+    void overLongValues_truncated() {
+        AreaBasedItem i = validItem();
+        i.setTitle("가".repeat(300));   // 255 초과
+        i.setTel("0".repeat(150));      // 100 초과
+
+        AttractionDto d = convert(i).attractions().get(0);
+        assertThat(d.getTitle()).hasSize(255);
+        assertThat(d.getTel()).hasSize(100);
+    }
 }

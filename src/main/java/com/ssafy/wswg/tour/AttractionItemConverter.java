@@ -43,6 +43,10 @@ public class AttractionItemConverter {
     private static final double LON_MIN = 124.0;
     private static final double LON_MAX = 132.0;
 
+    // DB 컬럼 길이 한도(VARCHAR). 초과 값은 절단한다(전체 트랜잭션이 깨지는 것 방지).
+    private static final int TITLE_MAX = 255;   // attractions.title VARCHAR(255)
+    private static final int TEL_MAX = 100;     // attractions.tel   VARCHAR(100)
+
     /**
      * 변환 결과: 유효 DTO 목록 + 스킵 카운트.
      */
@@ -85,7 +89,7 @@ public class AttractionItemConverter {
 
             AttractionDto dto = new AttractionDto();
             dto.setContentId(contentId);
-            dto.setTitle(title.trim());
+            dto.setTitle(truncate(title.trim(), TITLE_MAX));
 
             // contentTypeId: 유효 세트에 없으면 null (FK nullable)
             Integer contentTypeId = parseIntOrNull(item.getContenttypeid());
@@ -133,8 +137,8 @@ public class AttractionItemConverter {
             dto.setFirstImage1(httpUrlOrNull(item.getFirstimage()));
             dto.setFirstImage2(httpUrlOrNull(item.getFirstimage2()));
 
-            // tel/addr
-            dto.setTel(blankToNull(item.getTel()));
+            // tel/addr (tel은 VARCHAR(100) 초과 시 절단)
+            dto.setTel(truncate(blankToNull(item.getTel()), TEL_MAX));
             dto.setAddr1(blankToNull(item.getAddr1()));
             dto.setAddr2(blankToNull(item.getAddr2()));
 
@@ -204,6 +208,14 @@ public class AttractionItemConverter {
 
     private String blankToNull(String s) {
         return isBlank(s) ? null : s.trim();
+    }
+
+    /** VARCHAR 한도 초과 문자열을 잘라낸다(null 안전). 한 행의 긴 값이 트랜잭션 전체를 깨는 것 방지. */
+    private String truncate(String s, int max) {
+        if (s == null || s.length() <= max) {
+            return s;
+        }
+        return s.substring(0, max);
     }
 
     private boolean isBlank(String s) {

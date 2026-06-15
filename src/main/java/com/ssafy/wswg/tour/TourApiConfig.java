@@ -23,14 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class TourApiConfig {
 
     @Bean
-    public ObjectMapper tourApiObjectMapper() {
-        return new ObjectMapper()
-                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
-                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    }
-
-    @Bean
     public RestClient.Builder tourApiRestClientBuilder(TourApiProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(properties.getConnectTimeoutMs());
@@ -40,8 +32,20 @@ public class TourApiConfig {
 
     @Bean
     public TourApiClient tourApiClient(RestClient.Builder tourApiRestClientBuilder,
-            TourApiProperties properties,
-            ObjectMapper tourApiObjectMapper) {
-        return new TourApiClient(tourApiRestClientBuilder, properties, tourApiObjectMapper);
+            TourApiProperties properties) {
+        return new TourApiClient(tourApiRestClientBuilder, properties, tourApiObjectMapper());
+    }
+
+    /**
+     * TourAPI 응답 전용 ObjectMapper. <b>일부러 빈으로 등록하지 않는다.</b>
+     * 네이키드 {@code ObjectMapper} 빈을 노출하면 Spring Boot가 MVC 응답 직렬화에도
+     * 이 매퍼를 써버려(JavaTimeModule 등 Boot 기본 설정 상실) {@code LocalDateTime}
+     * 직렬화가 깨진다. 그래서 클라이언트 생성 시점에만 만들어 주입한다.
+     */
+    private ObjectMapper tourApiObjectMapper() {
+        return new ObjectMapper()
+                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 }
