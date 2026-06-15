@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import com.ssafy.wswg.model.dto.GroupDto;
+import com.ssafy.wswg.model.dto.GroupMemberDto;
 
 @Mapper
 public interface GroupDao {
@@ -17,7 +18,15 @@ public interface GroupDao {
 
     GroupDto readGroupById(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
+    int countGroupById(@Param("groupId") Long groupId);
+
+    int countGroupMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
     int countGroupOwner(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
+    int countUserById(@Param("userId") Long userId);
+
+    List<GroupMemberDto> readMembers(@Param("groupId") Long groupId);
 
     int updateGroupName(@Param("groupId") Long groupId, @Param("groupName") String groupName);
 
