@@ -13,6 +13,7 @@ public enum ErrorCode {
     INVALID_INVITE_TOKEN(40001, HttpStatus.BAD_REQUEST, "유효하지 않은 초대 토큰입니다."),
     EXPIRED_INVITE_TOKEN(40002, HttpStatus.BAD_REQUEST, "만료된 초대 링크입니다."),
     BAD_REQUEST_JSON(40003, HttpStatus.BAD_REQUEST, "잘못된 JSON 형식입니다."),
+    INVALID_NEARBY_RECOMMEND_REQUEST(40004, HttpStatus.BAD_REQUEST, "주변 명소 추천 요청 파라미터를 확인해 주세요."),
 
     // 401
     UNAUTHORIZED(40100, HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),

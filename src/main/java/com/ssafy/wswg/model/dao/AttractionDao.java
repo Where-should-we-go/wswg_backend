@@ -6,8 +6,16 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import com.ssafy.wswg.model.dto.AttractionDto;
+import com.ssafy.wswg.model.dto.NearbyAttractionDto;
 
 @Mapper
 public interface AttractionDao {
     int bulkUpsert(@Param("list") List<AttractionDto> attractions);
+
+    List<NearbyAttractionDto> findNearbyAttractions(
+            @Param("latitude") double latitude,
+            @Param("longitude") double longitude,
+            @Param("radiusMeters") int radiusMeters,
+            @Param("contentTypeId") Integer contentTypeId,
+            @Param("limit") int limit);
 }

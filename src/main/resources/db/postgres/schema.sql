@@ -67,6 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(sido_code
 CREATE INDEX IF NOT EXISTS idx_attractions_content_type ON attractions(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_attractions_title        ON attractions(title);
 CREATE INDEX IF NOT EXISTS idx_attractions_geom         ON attractions USING GIST(geom);
+CREATE INDEX IF NOT EXISTS idx_attractions_geog         ON attractions USING GIST((geom::geography));
 
 -- ============================================================
 -- 모임
