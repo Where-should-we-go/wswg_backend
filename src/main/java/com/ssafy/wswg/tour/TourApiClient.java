@@ -12,6 +12,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
 import com.ssafy.wswg.tour.dto.AreaBasedItem;
@@ -26,10 +27,9 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>설계 메모:
  * <ul>
- *   <li>응답을 String으로 받아 주입된 {@link ObjectMapper}로 직접 파싱한다.
- *       KorService2의 빈 결과 {@code "items":""} 트랩은 ObjectMapper의
- *       ACCEPT_EMPTY_STRING_AS_NULL_OBJECT 설정으로 흡수되어야 하므로,
- *       메시지 컨버터에 위임하지 않고 동일한 ObjectMapper를 명시적으로 쓴다.</li>
+ *   <li>응답을 String으로 받아 내부 {@link #OBJECT_MAPPER}로 직접 파싱한다.
+ *       KorService2의 빈 결과 {@code "items":""} 트랩을 ACCEPT_EMPTY_STRING_AS_NULL_OBJECT로
+ *       흡수해야 하므로, 메시지 컨버터에 위임하지 않고 전용 ObjectMapper를 명시적으로 쓴다.</li>
  *   <li>serviceKey는 UriComponentsBuilder로 한 번만 인코딩한다(이중 인코딩 방지).</li>
  *   <li>재시도 가능한 실패(TRANSIENT / IOException / timeout / 5xx)는
  *       지수 백오프로 최대 {@code retryMaxAttempts}회 재시도한다. 재시도 불가
@@ -41,19 +41,29 @@ public class TourApiClient {
 
     private static final String OK_CODE = "0000";
 
+    /**
+     * KorService2 응답 파싱 전용 ObjectMapper. 클라이언트 내부 구현이라 여기 둔다.
+     * <b>스프링 빈으로 노출하지 않는다</b> — 네이키드 {@code ObjectMapper} 빈은 Spring Boot가
+     * MVC 응답 직렬화에까지 써버려(JavaTimeModule 등 Boot 기본 설정 상실) {@code LocalDateTime}
+     * 직렬화가 깨진다. 파싱 트랩(빈 문자열 items, 단건 item, 미지 필드)만 흡수한다.
+     * ObjectMapper는 설정 후 thread-safe하므로 static 단일 인스턴스를 재사용한다.
+     */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
+            .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     private final RestClient restClient;
     private final TourApiProperties properties;
-    private final ObjectMapper objectMapper;
 
     /**
-     * @param builder      RestClient 빌더. 타임아웃 등 요청 팩토리 설정은
-     *                     {@link TourApiConfig}에서 빌더에 적용해 주입한다(테스트는
-     *                     MockRestServiceServer에 바인딩된 빌더를 그대로 주입).
-     *                     클라이언트는 요청 팩토리를 덮어쓰지 않는다(목 서버를 보존하기 위함).
+     * @param builder RestClient 빌더. 타임아웃 등 요청 팩토리 설정은
+     *                {@link TourApiConfig}에서 빌더에 적용해 주입한다(테스트는
+     *                MockRestServiceServer에 바인딩된 빌더를 그대로 주입).
+     *                클라이언트는 요청 팩토리를 덮어쓰지 않는다(목 서버를 보존하기 위함).
      */
-    public TourApiClient(RestClient.Builder builder, TourApiProperties properties, ObjectMapper objectMapper) {
+    public TourApiClient(RestClient.Builder builder, TourApiProperties properties) {
         this.properties = properties;
-        this.objectMapper = objectMapper;
         this.restClient = builder.build();
     }
 
@@ -154,7 +164,7 @@ public class TourApiClient {
 
         TourApiResponse<T> response;
         try {
-            response = objectMapper.readValue(body, objectMapper.getTypeFactory()
+            response = OBJECT_MAPPER.readValue(body, OBJECT_MAPPER.getTypeFactory()
                     .constructType(type));
         } catch (IOException e) {
             throw new TourApiException(TourApiErrorType.UNKNOWN, false, null,

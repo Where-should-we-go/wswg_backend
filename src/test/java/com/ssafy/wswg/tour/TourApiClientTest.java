@@ -20,8 +20,6 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
 import com.ssafy.wswg.tour.dto.AreaBasedItem;
 import com.ssafy.wswg.tour.dto.AreaBasedPage;
@@ -55,12 +53,7 @@ class TourApiClientTest {
         properties.setRetryBackoffMs(1);
         properties.setRetryMaxAttempts(3);
 
-        ObjectMapper objectMapper = new ObjectMapper()
-                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
-                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-        client = new TourApiClient(builder, properties, objectMapper);
+        client = new TourApiClient(builder, properties);
     }
 
     private String fixture(String name) {
@@ -277,11 +270,7 @@ class TourApiClientTest {
         p2.setRetryBackoffMs(1);
         p2.setRetryMaxAttempts(3);
 
-        ObjectMapper om = new ObjectMapper()
-                .configure(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT, true)
-                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
-                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        TourApiClient c2 = new TourApiClient(b2, p2, om);
+        TourApiClient c2 = new TourApiClient(b2, p2);
 
         // +→%2B, /→%2F, =→%3D 로 1회 인코딩. 이중 인코딩이면 %252B 가 되어 매칭 실패.
         s2.expect(requestTo(org.hamcrest.Matchers.containsString("serviceKey=ab%2Bcd%2Fef%3D%3D")))
