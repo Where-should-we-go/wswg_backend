@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ssafy.wswg.model.dto.GroupCreateRequestDto;
 import com.ssafy.wswg.model.dto.GroupDto;
+import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
+import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
+import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
+import com.ssafy.wswg.model.dto.GroupMemberDto;
 import com.ssafy.wswg.model.dto.GroupUpdateRequestDto;
 import com.ssafy.wswg.model.service.GroupService;
 import com.ssafy.wswg.security.LoginUserId;
@@ -56,6 +60,35 @@ public class GroupController {
             @PathVariable Long groupId,
             @RequestBody(required = false) GroupUpdateRequestDto request) {
         return ResponseEntity.ok(groupService.updateGroup(groupId, userId, request));
+    }
+
+    @GetMapping("/{groupId}/members")
+    public ResponseEntity<List<GroupMemberDto>> readMembers(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId) {
+        return ResponseEntity.ok(groupService.readMembers(groupId, userId));
+    }
+
+    @PostMapping("/{groupId}/members")
+    public ResponseEntity<GroupMemberDto> addMember(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId,
+            @RequestBody(required = false) GroupMemberAddRequestDto request) {
+        return ResponseEntity.ok(groupService.addMember(groupId, userId, request));
+    }
+
+    @PostMapping("/{groupId}/invite-link")
+    public ResponseEntity<GroupInviteLinkDto> createInviteLink(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId) {
+        return ResponseEntity.ok(groupService.createInviteLink(groupId, userId));
+    }
+
+    @PostMapping("/join")
+    public ResponseEntity<GroupDto> joinGroup(
+            @LoginUserId Long userId,
+            @RequestBody(required = false) GroupJoinRequestDto request) {
+        return ResponseEntity.ok(groupService.joinGroup(userId, request));
     }
 
     @DeleteMapping("/{groupId}")

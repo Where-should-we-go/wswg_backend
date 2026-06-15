@@ -63,6 +63,42 @@
           AND owner_id = #{userId}
     </select>
 
+    <select id="countGroupById" resultType="int">
+        SELECT COUNT(*)
+        FROM groups
+        WHERE group_id = #{groupId}
+    </select>
+
+    <select id="countGroupMember" resultType="int">
+        SELECT COUNT(*)
+        FROM user_group
+        WHERE group_id = #{groupId}
+          AND user_id = #{userId}
+    </select>
+
+    <select id="countUserById" resultType="int">
+        SELECT COUNT(*)
+        FROM users
+        WHERE id = #{userId}
+    </select>
+
+    <select id="readMembers" resultType="com.ssafy.wswg.model.dto.GroupMemberDto">
+        SELECT
+            u.id AS user_id,
+            u.name,
+            u.email,
+            u.profile_image_url,
+            (g.owner_id = u.id) AS owner,
+            ug.joined_at
+        FROM user_group ug
+        INNER JOIN users u
+            ON u.id = ug.user_id
+        INNER JOIN groups g
+            ON g.group_id = ug.group_id
+        WHERE ug.group_id = #{groupId}
+        ORDER BY owner DESC, ug.joined_at ASC, u.id ASC
+    </select>
+
     <update id="updateGroupName">
         UPDATE groups
         SET group_name = #{groupName}
