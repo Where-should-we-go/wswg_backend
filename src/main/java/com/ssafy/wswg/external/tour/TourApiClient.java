@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
 import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
 import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.dto.DetailCommonItem;
 import com.ssafy.wswg.external.tour.dto.LdongItem;
 import com.ssafy.wswg.external.tour.dto.TourApiResponse;
 
@@ -105,6 +106,28 @@ public class TourApiClient {
                 response.totalCount(),
                 response.pageNo(),
                 response.numOfRows());
+    }
+
+    /**
+     * 관광지 공통 상세(detailCommon2). 개요/홈페이지 등 타입별 공통정보를 조회한다(A-6 write-through).
+     * v4.4부터 요청은 contentId만 필요(YN 플래그 폐지). 단건 item을 반환하며, 결과가 없으면 null.
+     */
+    public DetailCommonItem fetchDetailCommon(int contentId) {
+        URI uri = UriComponentsBuilder.fromUriString(properties.getBaseUrl())
+                .path("/detailCommon2")
+                .queryParam("serviceKey", encodedServiceKey())
+                .queryParam("MobileOS", "ETC")
+                .queryParam("MobileApp", properties.getMobileApp())
+                .queryParam("_type", "json")
+                .queryParam("contentId", contentId)
+                .build(true)
+                .toUri();
+
+        TourApiResponse<DetailCommonItem> response = withRetry(() -> getAndParse(uri,
+                new TypeReference<TourApiResponse<DetailCommonItem>>() {}));
+
+        List<DetailCommonItem> items = response.itemList();
+        return items.isEmpty() ? null : items.get(0);
     }
 
     private URI ldongUri(Integer regnCd) {

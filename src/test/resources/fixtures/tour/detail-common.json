@@ -1,0 +1,28 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "contentid": "126128",
+            "contenttypeid": "12",
+            "title": "동촌유원지",
+            "createdtime": "20031105090000",
+            "modifiedtime": "20250425092225",
+            "tel": "",
+            "homepage": "<a href=\"https://tour.daegu.go.kr/index.do?menu_id=00002942\" target=\"_blank\" title=\"새창 : 홈페이지로 이동\">https://tour.daegu.go.kr</a>",
+            "firstimage": "http://tong.visitkorea.or.kr/cms/resource/86/3488286_image2_1.JPG",
+            "addr1": "대구광역시 동구 효목동",
+            "mapx": "128.6506352387",
+            "mapy": "35.8826195757",
+            "overview": "동촌유원지는 대구시 동쪽 금호강변에 있는 44만 평의 유원지로 오래전부터 대구 시민이 즐겨 찾는 곳이다."
+          }
+        ]
+      },
+      "numOfRows": 1,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

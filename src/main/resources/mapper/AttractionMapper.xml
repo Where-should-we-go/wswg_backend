@@ -210,4 +210,23 @@
         WHERE a.content_id = #{contentId}
     </select>
 
+    <!--
+      A-6 write-through(공통정보). detailCommon2의 overview/homepage만 캐시한다.
+      다른 컬럼은 SET에 없으므로 보존된다. 외부 HTTP가 끝난 뒤 짧은 트랜잭션으로만 실행.
+
+      A-6는 lazy fill만 하므로 overview가 NULL일 때만 호출되지만, 향후 재동기화 경로가
+      빈 응답으로 호출해도 안전하도록 UPDATE 자체를 방어적으로 짠다:
+        overview = COALESCE(NULLIF(#{overview},''), overview, '')
+          · 새 값이 있으면 그 값
+          · 새 값이 비면(빈 응답) 기존 값 보존(데이터 손실 방지)
+          · 기존도 NULL이면 '' 센티넬('조회완료·내용없음' → 재호출 방지. NULL=미조회 신호이므로)
+        homepage = COALESCE(#{homepage}, homepage)  · 새 값 없으면 기존 보존(homepage는 트리거 아님)
+    -->
+    <update id="updateOverviewCache">
+        UPDATE attractions
+        SET overview = COALESCE(NULLIF(#{overview}, ''), overview, ''),
+            homepage = COALESCE(#{homepage}, homepage)
+        WHERE content_id = #{contentId}
+    </update>
+
 </mapper>

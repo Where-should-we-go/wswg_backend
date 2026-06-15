@@ -129,4 +129,48 @@ class AttractionDetailDaoPgTest extends AbstractPostgisIntegrationTest {
     void selectDetail_notFoundReturnsNull() {
         assertThat(attractionDao.selectDetailByContentId(99999999)).isNull();
     }
+
+    @Test
+    @DisplayName("updateOverviewCache: overview/homepage만 갱신, 다른 컬럼·rest_date 보존")
+    void updateOverviewCache_updatesOnlyOverviewAndHomepage() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+        // rest_date가 이미 채워져 있어도 overview 캐시가 건드리지 않아야 함
+        jdbc.update("UPDATE attractions SET rest_date = ? WHERE content_id = ?", "매주 화요일", A);
+
+        int updated = attractionDao.updateOverviewCache(A, "조선의 법궁", "http://royalpalace.go.kr");
+
+        assertThat(updated).isEqualTo(1);
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getOverview()).isEqualTo("조선의 법궁");
+        assertThat(d.getHomepage()).isEqualTo("http://royalpalace.go.kr");
+        // 보존 확인
+        assertThat(d.getTitle()).isEqualTo("경복궁");
+        assertThat(d.getTel()).isEqualTo("02-1234-5678");
+        assertThat(d.getRestDate()).isEqualTo("매주 화요일");
+    }
+
+    @Test
+    @DisplayName("updateOverviewCache: overview null → '' 센티넬 저장(미조회 NULL과 구분, 재호출 방지)")
+    void updateOverviewCache_nullOverviewStoresEmptySentinel() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+
+        attractionDao.updateOverviewCache(A, null, null);
+
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getOverview()).isEmpty();   // NULL 아님 → lazy fill 재트리거 안 됨
+        assertThat(d.getHomepage()).isNull();    // homepage는 트리거 아님 → NULL 허용
+    }
+
+    @Test
+    @DisplayName("updateOverviewCache: 빈 응답이 이미 캐시된 overview/homepage를 덮어쓰지 않음(재동기화 방어)")
+    void updateOverviewCache_emptyDoesNotOverwriteExisting() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+        attractionDao.updateOverviewCache(A, "조선의 법궁", "http://royalpalace.go.kr");  // 최초 채움
+
+        attractionDao.updateOverviewCache(A, null, null);  // 재동기화가 빈 응답으로 호출
+
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getOverview()).isEqualTo("조선의 법궁");           // 보존(데이터 손실 없음)
+        assertThat(d.getHomepage()).isEqualTo("http://royalpalace.go.kr");  // 보존
+    }
 }

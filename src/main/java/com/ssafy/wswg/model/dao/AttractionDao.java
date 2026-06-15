@@ -48,4 +48,12 @@ public interface AttractionDao {
      * (코드가 null인 관광지도 누락 없이 반환, 미매칭 이름은 null). 없는 contentId면 null.
      */
     AttractionDetailDto selectDetailByContentId(@Param("contentId") Integer contentId);
+
+    /**
+     * A-6 write-through: detailCommon2로 받은 overview/homepage를 캐시한다(다른 컬럼은 건드리지 않음).
+     * 외부 HTTP는 트랜잭션 밖에서 끝낸 뒤 이 UPDATE만 짧게 실행한다.
+     */
+    int updateOverviewCache(@Param("contentId") Integer contentId,
+            @Param("overview") String overview,
+            @Param("homepage") String homepage);
 }
