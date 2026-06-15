@@ -1,14 +1,20 @@
 package com.ssafy.wswg.controller;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ssafy.wswg.model.dto.ErrorResponseDto;
 import com.ssafy.wswg.model.service.TourLoadService;
 import com.ssafy.wswg.model.service.TourLoadService.TourLoadResult;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
@@ -34,16 +40,24 @@ public class AdminTourController {
     }
 
     @Operation(summary = "TourAPI 적재 수동 실행(동기)",
-            description = "지역+관광지를 동기로 적재한다. 이미 진행 중이면 409.")
+            description = "지역+관광지를 동기로 적재한다. 이미 진행 중이면 409, 쿼터/키 오류·적재 실패 시 502.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "적재 완료(SUCCESS/DEGRADED 요약 반환)"),
+            @ApiResponse(responseCode = "409", description = "이미 적재가 진행 중",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class))),
+            @ApiResponse(responseCode = "502", description = "TourAPI 쿼터/키 오류 또는 적재 실패",
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDto.class)))
+    })
     @PostMapping("/load")
-    public TourLoadResult load() {
-        return tourLoadService.load();
+    public ResponseEntity<TourLoadResult> load() {
+        return ResponseEntity.ok(tourLoadService.load());
     }
 
     @Operation(summary = "TourAPI 적재 상태 조회",
             description = "현재 실행 중 여부와 마지막 적재 결과를 반환한다.")
+    @ApiResponse(responseCode = "200", description = "실행 중 여부 + 마지막 적재 결과")
     @GetMapping("/load/status")
-    public StatusResponse status() {
-        return new StatusResponse(tourLoadService.isRunning(), tourLoadService.getLast());
+    public ResponseEntity<StatusResponse> status() {
+        return ResponseEntity.ok(new StatusResponse(tourLoadService.isRunning(), tourLoadService.getLast()));
     }
 }
