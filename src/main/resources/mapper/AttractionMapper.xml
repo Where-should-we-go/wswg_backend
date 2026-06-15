@@ -7,7 +7,7 @@
 
     <!--
       주간 배치 upsert. geom은 GENERATED ALWAYS라 컬럼 목록/SET에서 제외(포함 시 에러).
-      overview / homepage는 A-6 write-through가 채우므로 배치가 절대 덮어쓰지 않는다
+      overview / homepage / rest_date는 A-6 write-through가 채우므로 배치가 절대 덮어쓰지 않는다
       (INSERT 컬럼 목록·DO UPDATE SET 양쪽 모두에서 제외해 기존 값 보존).
     -->
     <insert id="bulkUpsert">
@@ -171,6 +171,43 @@
         SELECT COUNT(*)
         FROM attractions a
         <include refid="searchWhere"/>
+    </select>
+
+    <!--
+      관광지 단건 상세(A-6). 표시 필드 전체 + 지역명/콘텐츠타입명을 LEFT JOIN으로 채운다
+      (일부 attraction은 sido_code/gugun_code/content_type_id가 null이라 INNER JOIN하면 누락됨).
+      overview/homepage/rest_date는 write-through로 채워지는 캐시 컬럼.
+      없는 content_id면 결과 0행 → DAO는 null 반환.
+    -->
+    <select id="selectDetailByContentId" resultType="com.ssafy.wswg.model.dto.AttractionDetailDto">
+        SELECT a.content_id         AS contentId,
+               a.title              AS title,
+               a.content_type_id    AS contentTypeId,
+               ct.content_type_name AS contentTypeName,
+               a.sido_code          AS sidoCode,
+               s.sido_name          AS sidoName,
+               a.gugun_code         AS gugunCode,
+               g.gugun_name         AS gugunName,
+               a.first_image1       AS firstImage1,
+               a.first_image2       AS firstImage2,
+               a.map_level          AS mapLevel,
+               a.latitude           AS latitude,
+               a.longitude          AS longitude,
+               a.tel                AS tel,
+               a.addr1              AS addr1,
+               a.addr2              AS addr2,
+               a.homepage           AS homepage,
+               a.overview           AS overview,
+               a.rest_date          AS restDate,
+               a.modified_time      AS modifiedTime
+        FROM attractions a
+        LEFT JOIN sidos s
+            ON a.sido_code = s.sido_code
+        LEFT JOIN guguns g
+            ON a.sido_code = g.sido_code AND a.gugun_code = g.gugun_code
+        LEFT JOIN contenttypes ct
+            ON a.content_type_id = ct.content_type_id
+        WHERE a.content_id = #{contentId}
     </select>
 
 </mapper>

@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.ssafy.wswg.model.dto.AttractionDetailDto;
 import com.ssafy.wswg.model.dto.AttractionDto;
 import com.ssafy.wswg.model.dto.AttractionSearchCondition;
 import com.ssafy.wswg.model.dto.AttractionSummaryDto;
@@ -41,4 +42,10 @@ public interface AttractionDao {
 
     /** search와 동일한 필터로 전체 매칭 건수를 센다(페이징 totalElements용). */
     long countSearch(@Param("cond") AttractionSearchCondition cond);
+
+    /**
+     * 관광지 단건 상세(A-6). sidos/guguns/contenttypes를 LEFT JOIN해 이름 3종을 채운다
+     * (코드가 null인 관광지도 누락 없이 반환, 미매칭 이름은 null). 없는 contentId면 null.
+     */
+    AttractionDetailDto selectDetailByContentId(@Param("contentId") Integer contentId);
 }
