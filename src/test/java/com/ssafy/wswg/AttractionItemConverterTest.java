@@ -10,9 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.ssafy.wswg.model.dto.AttractionDto;
-import com.ssafy.wswg.tour.AttractionItemConverter;
-import com.ssafy.wswg.tour.AttractionItemConverter.ConvertResult;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.AttractionItemConverter;
+import com.ssafy.wswg.external.tour.AttractionItemConverter.ConvertResult;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
 
 /**
  * AttractionItemConverter 정제/검증 규칙 단위 테스트(Docker 불필요).

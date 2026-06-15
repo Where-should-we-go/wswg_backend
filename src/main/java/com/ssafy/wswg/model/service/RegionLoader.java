@@ -7,8 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.ssafy.wswg.model.dto.GugunDto;
 import com.ssafy.wswg.model.dto.SidoDto;
-import com.ssafy.wswg.tour.TourApiClient;
-import com.ssafy.wswg.tour.dto.LdongItem;
+import com.ssafy.wswg.external.tour.TourApiClient;
+import com.ssafy.wswg.external.tour.dto.LdongItem;
 
 /**
  * 지역 마스터(시도/시군구) 적재 오케스트레이터.

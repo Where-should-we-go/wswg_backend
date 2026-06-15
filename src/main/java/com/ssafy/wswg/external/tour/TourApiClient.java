@@ -1,4 +1,4 @@
-package com.ssafy.wswg.tour;
+package com.ssafy.wswg.external.tour;
 
 import java.io.IOException;
 import java.net.URI;
@@ -14,11 +14,11 @@ import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
-import com.ssafy.wswg.tour.dto.AreaBasedPage;
-import com.ssafy.wswg.tour.dto.LdongItem;
-import com.ssafy.wswg.tour.dto.TourApiResponse;
+import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.dto.LdongItem;
+import com.ssafy.wswg.external.tour.dto.TourApiResponse;
 
 import lombok.extern.slf4j.Slf4j;
 

@@ -41,14 +41,14 @@ import com.ssafy.wswg.model.service.RegionLoader.RegionLoadResult;
 import com.ssafy.wswg.model.service.TourLoadService;
 import com.ssafy.wswg.model.service.TourLoadService.Status;
 import com.ssafy.wswg.model.service.TourLoadService.TourLoadResult;
-import com.ssafy.wswg.tour.AttractionItemConverter;
-import com.ssafy.wswg.tour.AttractionItemConverter.ConvertResult;
-import com.ssafy.wswg.tour.TourApiClient;
-import com.ssafy.wswg.tour.TourApiException;
-import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
-import com.ssafy.wswg.tour.TourApiProperties;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
-import com.ssafy.wswg.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.AttractionItemConverter;
+import com.ssafy.wswg.external.tour.AttractionItemConverter.ConvertResult;
+import com.ssafy.wswg.external.tour.TourApiClient;
+import com.ssafy.wswg.external.tour.TourApiException;
+import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
+import com.ssafy.wswg.external.tour.TourApiProperties;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
 
 /**
  * TourLoadService 오케스트레이션 단위 테스트(Docker 불필요, 모든 의존성 Mockito 목킹).

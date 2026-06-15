@@ -1,4 +1,4 @@
-package com.ssafy.wswg.tour;
+package com.ssafy.wswg.external.tour;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -9,7 +9,7 @@ import java.util.Set;
 import org.springframework.stereotype.Component;
 
 import com.ssafy.wswg.model.dto.AttractionDto;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
 
 /**
  * areaBasedList2의 {@link AreaBasedItem}(전부 String)을 정제·검증해

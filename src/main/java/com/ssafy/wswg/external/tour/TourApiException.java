@@ -1,4 +1,4 @@
-package com.ssafy.wswg.tour;
+package com.ssafy.wswg.external.tour;
 
 import lombok.Getter;
 

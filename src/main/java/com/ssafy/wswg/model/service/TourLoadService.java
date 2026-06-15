@@ -17,14 +17,14 @@ import com.ssafy.wswg.model.dao.RegionDao;
 import com.ssafy.wswg.model.dto.BatchRunLog;
 import com.ssafy.wswg.model.dto.GugunDto;
 import com.ssafy.wswg.model.service.RegionLoader.RegionLoadResult;
-import com.ssafy.wswg.tour.AttractionItemConverter;
-import com.ssafy.wswg.tour.AttractionItemConverter.ConvertResult;
-import com.ssafy.wswg.tour.TourApiClient;
-import com.ssafy.wswg.tour.TourApiException;
-import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
-import com.ssafy.wswg.tour.TourApiProperties;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
-import com.ssafy.wswg.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.AttractionItemConverter;
+import com.ssafy.wswg.external.tour.AttractionItemConverter.ConvertResult;
+import com.ssafy.wswg.external.tour.TourApiClient;
+import com.ssafy.wswg.external.tour.TourApiException;
+import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
+import com.ssafy.wswg.external.tour.TourApiProperties;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
 
 import lombok.extern.slf4j.Slf4j;
 

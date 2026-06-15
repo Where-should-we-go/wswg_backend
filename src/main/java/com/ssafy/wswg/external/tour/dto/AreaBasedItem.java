@@ -1,4 +1,4 @@
-package com.ssafy.wswg.tour.dto;
+package com.ssafy.wswg.external.tour.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

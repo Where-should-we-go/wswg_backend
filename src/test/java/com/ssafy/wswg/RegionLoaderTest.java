@@ -22,8 +22,8 @@ import com.ssafy.wswg.model.dto.SidoDto;
 import com.ssafy.wswg.model.service.RegionLoader;
 import com.ssafy.wswg.model.service.RegionLoader.RegionLoadResult;
 import com.ssafy.wswg.model.service.RegionWriter;
-import com.ssafy.wswg.tour.TourApiClient;
-import com.ssafy.wswg.tour.dto.LdongItem;
+import com.ssafy.wswg.external.tour.TourApiClient;
+import com.ssafy.wswg.external.tour.dto.LdongItem;
 
 /**
  * RegionLoader 매핑/오케스트레이션 단위 테스트(Docker 불필요).

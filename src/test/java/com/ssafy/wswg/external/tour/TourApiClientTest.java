@@ -1,4 +1,4 @@
-package com.ssafy.wswg.tour;
+package com.ssafy.wswg.external.tour;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -20,10 +20,10 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
 
-import com.ssafy.wswg.tour.TourApiException.TourApiErrorType;
-import com.ssafy.wswg.tour.dto.AreaBasedItem;
-import com.ssafy.wswg.tour.dto.AreaBasedPage;
-import com.ssafy.wswg.tour.dto.LdongItem;
+import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
+import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
+import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.dto.LdongItem;
 
 /**
  * TourApiClient 단위 테스트. 실제 네트워크 없이 MockRestServiceServer로 응답을 모킹한다.
