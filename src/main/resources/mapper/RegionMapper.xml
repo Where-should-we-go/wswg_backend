@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.RegionDao">
+
+    <insert id="upsertSidos">
+        INSERT INTO sidos (sido_code, sido_name)
+        VALUES
+        <foreach collection="list" item="s" separator=",">
+            (#{s.sidoCode}, #{s.sidoName})
+        </foreach>
+        ON CONFLICT (sido_code) DO UPDATE SET sido_name = EXCLUDED.sido_name
+    </insert>
+
+    <insert id="upsertGuguns">
+        INSERT INTO guguns (sido_code, gugun_code, gugun_name)
+        VALUES
+        <foreach collection="list" item="g" separator=",">
+            (#{g.sidoCode}, #{g.gugunCode}, #{g.gugunName})
+        </foreach>
+        ON CONFLICT (sido_code, gugun_code) DO UPDATE SET gugun_name = EXCLUDED.gugun_name
+    </insert>
+
+    <select id="selectAllSidoCodes" resultType="java.lang.Integer">
+        SELECT sido_code FROM sidos
+    </select>
+
+    <select id="selectAllGuguns" resultType="com.ssafy.wswg.model.dto.GugunDto">
+        SELECT sido_code AS sidoCode, gugun_code AS gugunCode, gugun_name AS gugunName
+        FROM guguns
+    </select>
+
+</mapper>

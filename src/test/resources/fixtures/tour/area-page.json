@@ -1,0 +1,68 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "addr1": "충청남도 태안군 남면 청포대길 17",
+            "addr2": "아멜리아풀빌라",
+            "areacode": "",
+            "cat1": "",
+            "cat2": "",
+            "cat3": "",
+            "contentid": "3102220",
+            "contenttypeid": "32",
+            "createdtime": "20240217153626",
+            "firstimage": "",
+            "firstimage2": "",
+            "cpyrhtDivCd": "",
+            "mapx": "126.3062683445",
+            "mapy": "36.6392865898",
+            "mlevel": "6",
+            "modifiedtime": "20260612191231",
+            "sigungucode": "",
+            "tel": "",
+            "title": "아멜리아풀빌라",
+            "zipcode": "32157",
+            "lDongRegnCd": "44",
+            "lDongSignguCd": "825",
+            "lclsSystm1": "AC",
+            "lclsSystm2": "AC03",
+            "lclsSystm3": "AC030100"
+          },
+          {
+            "addr1": "서울특별시 종로구 사직로 161",
+            "addr2": "",
+            "areacode": "1",
+            "cat1": "A02",
+            "cat2": "A0201",
+            "cat3": "A02010100",
+            "contentid": "126508",
+            "contenttypeid": "12",
+            "createdtime": "20021223090000",
+            "firstimage": "http://tong.visitkorea.or.kr/cms/a.jpg",
+            "firstimage2": "http://tong.visitkorea.or.kr/cms/a_t.jpg",
+            "cpyrhtDivCd": "Type3",
+            "mapx": "126.9769930325",
+            "mapy": "37.5796310765",
+            "mlevel": "6",
+            "modifiedtime": "20250101120000",
+            "sigungucode": "23",
+            "tel": "02-3700-3900",
+            "title": "경복궁",
+            "zipcode": "03045",
+            "lDongRegnCd": "11",
+            "lDongSignguCd": "110",
+            "lclsSystm1": "VE",
+            "lclsSystm2": "VE01",
+            "lclsSystm3": "VE010200"
+          }
+        ]
+      },
+      "numOfRows": 1000,
+      "pageNo": 1,
+      "totalCount": 50710
+    }
+  }
+}

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.BatchRunLogDao">
+
+    <insert id="insertLog" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO batch_run_log (
+            job_name, status, started_at, finished_at,
+            total_count, attraction_count, sido_count, gugun_count,
+            skipped_validation, skipped_fk, error_code, error_message)
+        VALUES (
+            #{jobName}, #{status}, #{startedAt}, #{finishedAt},
+            #{totalCount}, #{attractionCount}, #{sidoCount}, #{gugunCount},
+            #{skippedValidation}, #{skippedFk}, #{errorCode}, #{errorMessage})
+    </insert>
+
+</mapper>

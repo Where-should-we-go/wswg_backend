@@ -1,0 +1,6 @@
+{
+  "response": {
+    "header": { "resultCode": "01", "resultMsg": "APPLICATION_ERROR" },
+    "body": { "items": "", "numOfRows": 0, "pageNo": 1, "totalCount": 0 }
+  }
+}

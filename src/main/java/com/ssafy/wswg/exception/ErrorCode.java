@@ -25,8 +25,16 @@ public enum ErrorCode {
     NOT_FOUND_GROUP(40400, HttpStatus.NOT_FOUND, "존재하지 않는 모임입니다."),
     NOT_FOUND_USER(40401, HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
 
+    // 409
+    TOUR_LOAD_ALREADY_RUNNING(40900, HttpStatus.CONFLICT, "관광정보 적재가 이미 진행 중입니다."),
+
     // 500
-    INTERNAL_SERVER_ERROR(50000, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다.");
+    INTERNAL_SERVER_ERROR(50000, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
+
+    // 502 (TourAPI 연동 실패)
+    TOUR_API_KEY_INVALID(50200, HttpStatus.BAD_GATEWAY, "TourAPI 서비스키가 유효하지 않습니다."),
+    TOUR_API_QUOTA_EXCEEDED(50201, HttpStatus.BAD_GATEWAY, "TourAPI 일일 트래픽을 초과했습니다."),
+    TOUR_LOAD_FAILED(50202, HttpStatus.BAD_GATEWAY, "관광정보 적재에 실패했습니다.");
 
     private final Integer code;
     private final HttpStatus httpStatus;

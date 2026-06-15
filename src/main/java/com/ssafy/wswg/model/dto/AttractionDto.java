@@ -28,4 +28,5 @@ public class AttractionDto {
     private String addr2;
     private String homepage;
     private String overview;
+    private java.time.LocalDateTime modifiedTime;
 }

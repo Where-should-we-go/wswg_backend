@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS attractions (
     addr2 TEXT,
     homepage TEXT,
     overview TEXT,
+    modified_time TIMESTAMP,   -- TourAPI modifiedtime: A-6 캐시 무효화 신호
     CONSTRAINT fk_attractions_guguns
         FOREIGN KEY (sido_code, gugun_code)
         REFERENCES guguns(sido_code, gugun_code)
@@ -159,3 +160,23 @@ INSERT INTO contenttypes (content_type_id, content_type_name) VALUES
     (38, '쇼핑'),
     (39, '음식점')
 ON CONFLICT (content_type_id) DO NOTHING;
+
+-- ============================================================
+-- 배치 실행 로그 (A-3 TourAPI 적재 결과 감사 로그)
+--   매 실행이 정확히 1행을 남긴다: SUCCESS | DEGRADED | ABORTED.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS batch_run_log (
+    id BIGSERIAL PRIMARY KEY,
+    job_name VARCHAR(50) NOT NULL,
+    status VARCHAR(20) NOT NULL,            -- SUCCESS | DEGRADED | ABORTED
+    started_at TIMESTAMP NOT NULL,
+    finished_at TIMESTAMP,
+    total_count INTEGER,
+    attraction_count INTEGER,
+    sido_count INTEGER,
+    gugun_count INTEGER,
+    skipped_validation INTEGER,
+    skipped_fk INTEGER,
+    error_code VARCHAR(50),
+    error_message TEXT
+);

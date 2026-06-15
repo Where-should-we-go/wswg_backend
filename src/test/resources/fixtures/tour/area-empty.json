@@ -1,0 +1,11 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": "",
+      "numOfRows": 1000,
+      "pageNo": 99,
+      "totalCount": 50710
+    }
+  }
+}

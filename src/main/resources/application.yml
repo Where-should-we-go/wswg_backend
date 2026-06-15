@@ -72,3 +72,16 @@ jwt:
   expiration: 1200000
   #14일
   refresh-expiration: 1209600000
+
+# TourAPI (data.go.kr KorService2) 적재 배치용 설정
+tour-api:
+  base-url: http://apis.data.go.kr/B551011/KorService2
+  service-key: ${TOUR_API_KEY}
+  mobile-app: wswg
+  num-of-rows: 1000
+  schedule-cron: "0 0 4 * * MON"
+  # 타임아웃/재시도는 TourApiProperties 기본값 사용 (필요 시 여기서 override)
+  # connect-timeout-ms: 5000
+  # read-timeout-ms: 10000
+  # retry-max-attempts: 3
+  # retry-backoff-ms: 1000

@@ -1,0 +1,17 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": {
+        "item": [
+          { "rnum": 1, "code": "11", "name": "서울특별시" },
+          { "rnum": 2, "code": "26", "name": "부산광역시" },
+          { "rnum": 3, "code": "44", "name": "충청남도" }
+        ]
+      },
+      "numOfRows": 1000,
+      "pageNo": 1,
+      "totalCount": 17
+    }
+  }
+}
