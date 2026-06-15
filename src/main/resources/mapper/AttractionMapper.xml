@@ -69,4 +69,42 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findSemanticNearbyAttractions" resultType="com.ssafy.wswg.model.dto.SemanticAttractionDto">
+        SELECT
+            a.no,
+            a.content_id,
+            a.title,
+            a.content_type_id,
+            a.sido_code,
+            a.gugun_code,
+            a.first_image1,
+            a.first_image2,
+            a.latitude,
+            a.longitude,
+            a.addr1,
+            a.addr2,
+            ST_Distance(
+                a.geom::geography,
+                ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)::geography
+            ) AS distance_meters,
+            1 - (e.embedding &lt;=&gt; CAST(#{queryEmbedding} AS vector)) AS similarity
+        FROM attractions a
+        INNER JOIN attraction_embeddings e
+            ON e.content_id = a.content_id
+           AND e.embedding_model = #{embeddingModel}
+        WHERE a.geom IS NOT NULL
+          AND a.latitude IS NOT NULL
+          AND a.longitude IS NOT NULL
+          AND ST_DWithin(
+                a.geom::geography,
+                ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)::geography,
+                #{radiusMeters}
+          )
+        <if test="contentTypeId != null">
+          AND a.content_type_id = #{contentTypeId}
+        </if>
+        ORDER BY e.embedding &lt;=&gt; CAST(#{queryEmbedding} AS vector), distance_meters ASC, a.no ASC
+        LIMIT #{limit}
+    </select>
+
 </mapper>

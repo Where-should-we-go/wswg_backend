@@ -85,3 +85,8 @@ tour-api:
   # read-timeout-ms: 10000
   # retry-max-attempts: 3
   # retry-backoff-ms: 1000
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  embedding-model: text-embedding-3-small
+  embedding-url: https://api.openai.com/v1/embeddings

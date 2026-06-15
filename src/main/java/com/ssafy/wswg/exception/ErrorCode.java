@@ -14,6 +14,7 @@ public enum ErrorCode {
     EXPIRED_INVITE_TOKEN(40002, HttpStatus.BAD_REQUEST, "만료된 초대 링크입니다."),
     BAD_REQUEST_JSON(40003, HttpStatus.BAD_REQUEST, "잘못된 JSON 형식입니다."),
     INVALID_NEARBY_RECOMMEND_REQUEST(40004, HttpStatus.BAD_REQUEST, "주변 명소 추천 요청 파라미터를 확인해 주세요."),
+    INVALID_SEMANTIC_RECOMMEND_REQUEST(40005, HttpStatus.BAD_REQUEST, "의미 기반 명소 추천 요청 파라미터를 확인해 주세요."),
 
     // 401
     UNAUTHORIZED(40100, HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
@@ -35,7 +36,8 @@ public enum ErrorCode {
     // 502 (TourAPI 연동 실패)
     TOUR_API_KEY_INVALID(50200, HttpStatus.BAD_GATEWAY, "TourAPI 서비스키가 유효하지 않습니다."),
     TOUR_API_QUOTA_EXCEEDED(50201, HttpStatus.BAD_GATEWAY, "TourAPI 일일 트래픽을 초과했습니다."),
-    TOUR_LOAD_FAILED(50202, HttpStatus.BAD_GATEWAY, "관광정보 적재에 실패했습니다.");
+    TOUR_LOAD_FAILED(50202, HttpStatus.BAD_GATEWAY, "관광정보 적재에 실패했습니다."),
+    EMBEDDING_REQUEST_FAILED(50203, HttpStatus.BAD_GATEWAY, "임베딩 생성에 실패했습니다.");
 
     private final Integer code;
     private final HttpStatus httpStatus;

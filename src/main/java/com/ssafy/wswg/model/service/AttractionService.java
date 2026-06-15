@@ -7,8 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ssafy.wswg.exception.CommonException;
 import com.ssafy.wswg.exception.ErrorCode;
+import com.ssafy.wswg.external.openai.OpenAiEmbeddingClient;
 import com.ssafy.wswg.model.dao.AttractionDao;
 import com.ssafy.wswg.model.dto.NearbyAttractionDto;
+import com.ssafy.wswg.model.dto.NearbyAttractionRecommendRequestDto;
+import com.ssafy.wswg.model.dto.SemanticAttractionDto;
+import com.ssafy.wswg.model.dto.SemanticAttractionRecommendRequestDto;
 
 @Service
 @Transactional(readOnly = true)
@@ -17,29 +21,46 @@ public class AttractionService {
     private static final int MAX_RADIUS_METERS = 50000;
     private static final int DEFAULT_LIMIT = 20;
     private static final int MAX_LIMIT = 100;
+    private static final String EMBEDDING_MODEL = "text-embedding-3-small";
 
     private final AttractionDao attractionDao;
+    private final OpenAiEmbeddingClient openAiEmbeddingClient;
 
-    public AttractionService(AttractionDao attractionDao) {
+    public AttractionService(AttractionDao attractionDao, OpenAiEmbeddingClient openAiEmbeddingClient) {
         this.attractionDao = attractionDao;
+        this.openAiEmbeddingClient = openAiEmbeddingClient;
     }
 
-    public List<NearbyAttractionDto> recommendNearbyAttractions(
-            Double latitude,
-            Double longitude,
-            Integer radiusMeters,
-            Integer contentTypeId,
-            Integer limit) {
-        validateCoordinate(latitude, longitude);
+    public List<NearbyAttractionDto> recommendNearbyAttractions(NearbyAttractionRecommendRequestDto request) {
+        validateCoordinate(request.getLatitude(), request.getLongitude());
 
-        int normalizedRadiusMeters = normalizeRadiusMeters(radiusMeters);
-        int normalizedLimit = normalizeLimit(limit);
+        int normalizedRadiusMeters = normalizeRadiusMeters(request.getRadiusMeters());
+        int normalizedLimit = normalizeLimit(request.getLimit());
 
         return attractionDao.findNearbyAttractions(
-                latitude,
-                longitude,
+                request.getLatitude(),
+                request.getLongitude(),
                 normalizedRadiusMeters,
-                contentTypeId,
+                request.getContentTypeId(),
+                normalizedLimit);
+    }
+
+    public List<SemanticAttractionDto> recommendSemanticNearbyAttractions(
+            SemanticAttractionRecommendRequestDto request) {
+        validateCoordinate(request.getLatitude(), request.getLongitude());
+        validateQuery(request.getQuery());
+
+        int normalizedRadiusMeters = normalizeRadiusMeters(request.getRadiusMeters());
+        int normalizedLimit = normalizeLimit(request.getLimit());
+        String queryEmbedding = toVectorLiteral(openAiEmbeddingClient.createEmbedding(request.getQuery().trim()));
+
+        return attractionDao.findSemanticNearbyAttractions(
+                request.getLatitude(),
+                request.getLongitude(),
+                normalizedRadiusMeters,
+                request.getContentTypeId(),
+                queryEmbedding,
+                EMBEDDING_MODEL,
                 normalizedLimit);
     }
 
@@ -73,5 +94,22 @@ public class AttractionService {
         }
 
         return limit;
+    }
+
+    private void validateQuery(String query) {
+        if (query == null || query.trim().isEmpty() || query.trim().length() > 500) {
+            throw new CommonException(ErrorCode.INVALID_SEMANTIC_RECOMMEND_REQUEST);
+        }
+    }
+
+    private String toVectorLiteral(List<Double> embedding) {
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < embedding.size(); i++) {
+            if (i > 0) {
+                builder.append(',');
+            }
+            builder.append(embedding.get(i));
+        }
+        return builder.append(']').toString();
     }
 }
