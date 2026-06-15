@@ -78,4 +78,20 @@ class RegionDaoPgTest extends AbstractPostgisIntegrationTest {
                 String.class);
         assertThat(name).isEqualTo("테스트구1-수정");
     }
+
+    @Test
+    @DisplayName("selectAllSidoCodes / selectAllGuguns: 삽입한 행을 읽어온다(FK 검증 세트용)")
+    void selectAll_readsInsertedRows() {
+        regionDao.upsertSidos(List.of(new SidoDto(91001, "테스트시도A")));
+        regionDao.upsertGuguns(List.of(
+                new GugunDto(91001, 91101, "테스트구1"),
+                new GugunDto(91001, 91102, "테스트구2")));
+
+        assertThat(regionDao.selectAllSidoCodes()).contains(91001);
+
+        assertThat(regionDao.selectAllGuguns())
+                .filteredOn(g -> g.getSidoCode() == 91001)
+                .extracting(GugunDto::getGugunCode)
+                .containsExactlyInAnyOrder(91101, 91102);
+    }
 }

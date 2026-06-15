@@ -23,4 +23,13 @@
         ON CONFLICT (sido_code, gugun_code) DO UPDATE SET gugun_name = EXCLUDED.gugun_name
     </insert>
 
+    <select id="selectAllSidoCodes" resultType="java.lang.Integer">
+        SELECT sido_code FROM sidos
+    </select>
+
+    <select id="selectAllGuguns" resultType="com.ssafy.wswg.model.dto.GugunDto">
+        SELECT sido_code AS sidoCode, gugun_code AS gugunCode, gugun_name AS gugunName
+        FROM guguns
+    </select>
+
 </mapper>

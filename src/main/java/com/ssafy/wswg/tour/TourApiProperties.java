@@ -39,4 +39,10 @@ public class TourApiProperties {
 
     /** 재시도 백오프 기준 시간(ms). 시도마다 ×2로 증가한다. */
     private long retryBackoffMs = 1000;
+
+    /** 쓰기를 허용하기 위해 fetch해야 하는 totalCount 대비 최소 비율(커버리지 게이트). */
+    private double coverageThreshold = 0.98;
+
+    /** attractions upsert를 끊어서 보낼 청크 크기. */
+    private int upsertChunkSize = 500;
 }
