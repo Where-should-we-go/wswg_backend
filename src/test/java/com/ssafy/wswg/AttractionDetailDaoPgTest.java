@@ -173,4 +173,42 @@ class AttractionDetailDaoPgTest extends AbstractPostgisIntegrationTest {
         assertThat(d.getOverview()).isEqualTo("조선의 법궁");           // 보존(데이터 손실 없음)
         assertThat(d.getHomepage()).isEqualTo("http://royalpalace.go.kr");  // 보존
     }
+
+    @Test
+    @DisplayName("updateRestDateCache: 휴무일만 갱신, 다른 컬럼(overview 등) 보존")
+    void updateRestDateCache_updatesOnlyRestDate() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+        jdbc.update("UPDATE attractions SET overview = ? WHERE content_id = ?", "조선의 법궁", A);
+
+        int updated = attractionDao.updateRestDateCache(A, "매주 화요일");
+
+        assertThat(updated).isEqualTo(1);
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getRestDate()).isEqualTo("매주 화요일");
+        assertThat(d.getOverview()).isEqualTo("조선의 법궁");   // 보존
+        assertThat(d.getTitle()).isEqualTo("경복궁");
+    }
+
+    @Test
+    @DisplayName("updateRestDateCache: 빈 휴무일 → '' 센티넬(미조회 NULL과 구분, 재호출 방지)")
+    void updateRestDateCache_emptyStoresSentinel() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+
+        attractionDao.updateRestDateCache(A, null);   // 휴무일 없는 타입/빈 응답 모사
+
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getRestDate()).isEmpty();   // NULL 아님 → 재트리거 안 됨
+    }
+
+    @Test
+    @DisplayName("updateRestDateCache: 빈 값이 기존 휴무일을 덮어쓰지 않음(재동기화 방어)")
+    void updateRestDateCache_emptyDoesNotOverwriteExisting() {
+        attractionDao.bulkUpsert(List.of(attraction(A, "경복궁", 12, 11, 110)));
+        attractionDao.updateRestDateCache(A, "매주 화요일");
+
+        attractionDao.updateRestDateCache(A, null);
+
+        AttractionDetailDto d = attractionDao.selectDetailByContentId(A);
+        assertThat(d.getRestDate()).isEqualTo("매주 화요일");   // 보존
+    }
 }

@@ -229,4 +229,17 @@
         WHERE content_id = #{contentId}
     </update>
 
+    <!--
+      A-6 write-through(휴무일). detailIntro2의 restdate*만 rest_date에 캐시한다.
+      updateOverviewCache와 동일한 방어 패턴:
+        · 새 값이 있으면 그 값
+        · 새 값이 비면 기존 값 보존(재동기화 데이터 손실 방지)
+        · 기존도 NULL이면 '' 센티넬(조회완료 마킹 → 휴무일 없는 타입/빈 응답도 재호출 방지)
+    -->
+    <update id="updateRestDateCache">
+        UPDATE attractions
+        SET rest_date = COALESCE(NULLIF(#{restDate}, ''), rest_date, '')
+        WHERE content_id = #{contentId}
+    </update>
+
 </mapper>

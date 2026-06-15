@@ -56,4 +56,11 @@ public interface AttractionDao {
     int updateOverviewCache(@Param("contentId") Integer contentId,
             @Param("overview") String overview,
             @Param("homepage") String homepage);
+
+    /**
+     * A-6 write-through: detailIntro2로 받은 휴무일을 rest_date에 캐시한다(다른 컬럼 미변경).
+     * NULL=미조회 센티넬이라, 빈 값/휴무일 없는 타입도 ''로 마킹해 재호출을 막는다.
+     */
+    int updateRestDateCache(@Param("contentId") Integer contentId,
+            @Param("restDate") String restDate);
 }

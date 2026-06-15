@@ -18,6 +18,7 @@ import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
 import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
 import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
 import com.ssafy.wswg.external.tour.dto.DetailCommonItem;
+import com.ssafy.wswg.external.tour.dto.DetailIntroItem;
 import com.ssafy.wswg.external.tour.dto.LdongItem;
 import com.ssafy.wswg.external.tour.dto.TourApiResponse;
 
@@ -127,6 +128,30 @@ public class TourApiClient {
                 new TypeReference<TourApiResponse<DetailCommonItem>>() {}));
 
         List<DetailCommonItem> items = response.itemList();
+        return items.isEmpty() ? null : items.get(0);
+    }
+
+    /**
+     * 관광지 소개 상세(detailIntro2). A-6는 이 중 휴무일(restdate*)만 캐시한다.
+     * 요청은 contentId + contentTypeId 둘 다 필수(타입마다 응답 항목이 다름).
+     * 단건 item을 반환하며, 결과가 없으면 null.
+     */
+    public DetailIntroItem fetchDetailIntro(int contentId, int contentTypeId) {
+        URI uri = UriComponentsBuilder.fromUriString(properties.getBaseUrl())
+                .path("/detailIntro2")
+                .queryParam("serviceKey", encodedServiceKey())
+                .queryParam("MobileOS", "ETC")
+                .queryParam("MobileApp", properties.getMobileApp())
+                .queryParam("_type", "json")
+                .queryParam("contentId", contentId)
+                .queryParam("contentTypeId", contentTypeId)
+                .build(true)
+                .toUri();
+
+        TourApiResponse<DetailIntroItem> response = withRetry(() -> getAndParse(uri,
+                new TypeReference<TourApiResponse<DetailIntroItem>>() {}));
+
+        List<DetailIntroItem> items = response.itemList();
         return items.isEmpty() ? null : items.get(0);
     }
 
