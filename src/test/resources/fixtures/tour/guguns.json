@@ -1,0 +1,16 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": {
+        "item": [
+          { "rnum": 1, "code": "110", "name": "종로구" },
+          { "rnum": 2, "code": "140", "name": "중구" }
+        ]
+      },
+      "numOfRows": 1000,
+      "pageNo": 1,
+      "totalCount": 25
+    }
+  }
+}
