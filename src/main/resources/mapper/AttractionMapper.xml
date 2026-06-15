@@ -120,7 +120,8 @@
             <!--
               gugun_code는 전역 유일이 아니라 (sido_code, gugun_code) 복합키다.
               sido 없이 gugun만 걸면 다른 시도의 동일 코드 구군까지 매칭되므로,
-              gugun 필터는 sido가 함께 있을 때만 적용한다(서비스 계층에서 이 조합을 강제).
+              gugun 필터는 sido가 함께 있을 때만 적용한다(sido 없이 gugun만 오면
+              과매칭 대신 필터 미적용 → 명세 §2.4대로 거부하지 않고 200으로 조회).
             -->
             <if test="cond.gugunCode != null and cond.sidoCode != null">
                 AND a.gugun_code = #{cond.gugunCode}

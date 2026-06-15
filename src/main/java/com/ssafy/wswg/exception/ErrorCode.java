@@ -15,6 +15,7 @@ public enum ErrorCode {
     BAD_REQUEST_JSON(40003, HttpStatus.BAD_REQUEST, "잘못된 JSON 형식입니다."),
     INVALID_NEARBY_RECOMMEND_REQUEST(40004, HttpStatus.BAD_REQUEST, "주변 명소 추천 요청 파라미터를 확인해 주세요."),
     INVALID_SEMANTIC_RECOMMEND_REQUEST(40005, HttpStatus.BAD_REQUEST, "의미 기반 명소 추천 요청 파라미터를 확인해 주세요."),
+    INVALID_PAGINATION(40006, HttpStatus.BAD_REQUEST, "page는 0 이상, size는 1 이상이어야 합니다."),
 
     // 401
     UNAUTHORIZED(40100, HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
