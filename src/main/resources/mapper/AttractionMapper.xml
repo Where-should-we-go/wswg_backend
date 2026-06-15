@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.AttractionDao">
+
+    <!--
+      주간 배치 upsert. geom은 GENERATED ALWAYS라 컬럼 목록/SET에서 제외(포함 시 에러).
+      overview / homepage는 A-6 write-through가 채우므로 배치가 절대 덮어쓰지 않는다
+      (INSERT 컬럼 목록·DO UPDATE SET 양쪽 모두에서 제외해 기존 값 보존).
+    -->
+    <insert id="bulkUpsert">
+        INSERT INTO attractions (content_id, title, content_type_id, sido_code, gugun_code,
+            first_image1, first_image2, map_level, latitude, longitude, tel, addr1, addr2, modified_time)
+        VALUES
+        <foreach collection="list" item="a" separator=",">
+            (#{a.contentId}, #{a.title}, #{a.contentTypeId}, #{a.sidoCode}, #{a.gugunCode},
+             #{a.firstImage1}, #{a.firstImage2}, #{a.mapLevel}, #{a.latitude}, #{a.longitude},
+             #{a.tel}, #{a.addr1}, #{a.addr2}, #{a.modifiedTime})
+        </foreach>
+        ON CONFLICT (content_id) DO UPDATE SET
+            title           = EXCLUDED.title,
+            content_type_id = EXCLUDED.content_type_id,
+            sido_code       = EXCLUDED.sido_code,
+            gugun_code      = EXCLUDED.gugun_code,
+            first_image1    = EXCLUDED.first_image1,
+            first_image2    = EXCLUDED.first_image2,
+            map_level       = EXCLUDED.map_level,
+            latitude        = EXCLUDED.latitude,
+            longitude       = EXCLUDED.longitude,
+            tel             = EXCLUDED.tel,
+            addr1           = EXCLUDED.addr1,
+            addr2           = EXCLUDED.addr2,
+            modified_time   = EXCLUDED.modified_time
+    </insert>
+
+</mapper>

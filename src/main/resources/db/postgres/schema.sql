@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS attractions (
     addr2 TEXT,
     homepage TEXT,
     overview TEXT,
+    modified_time TIMESTAMP,   -- TourAPI modifiedtime: A-6 캐시 무효화 신호
     CONSTRAINT fk_attractions_guguns
         FOREIGN KEY (sido_code, gugun_code)
         REFERENCES guguns(sido_code, gugun_code)
