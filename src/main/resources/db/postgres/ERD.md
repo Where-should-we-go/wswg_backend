@@ -30,8 +30,8 @@ erDiagram
         integer content_id UK "NOT NULL"
         varchar title
         integer content_type_id FK
-        integer area_code FK "=sido_code"
-        integer si_gun_gu_code FK "=gugun_code"
+        integer sido_code FK "법정동 시도코드"
+        integer gugun_code FK "법정동 시군구코드"
         geometry geom "GENERATED(lat,lng) GIST"
     }
     groups { bigserial group_id PK
@@ -64,7 +64,7 @@ erDiagram
     }
 
     sidos ||--o{ guguns : "1:N"
-    sidos ||--o{ attractions : "area_code"
+    sidos ||--o{ attractions : "sido_code"
     guguns ||--o{ attractions : "복합FK"
     contenttypes ||--o{ attractions : "테마"
     users ||--o{ user_group : ""
