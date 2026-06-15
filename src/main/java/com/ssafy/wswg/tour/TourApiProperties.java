@@ -45,4 +45,7 @@ public class TourApiProperties {
 
     /** attractions upsert를 끊어서 보낼 청크 크기. */
     private int upsertChunkSize = 500;
+
+    /** 주간 자동 적재 스케줄(cron). 기본값: 매주 월요일 04:00. */
+    private String scheduleCron = "0 0 4 * * MON";
 }

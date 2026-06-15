@@ -79,6 +79,7 @@ tour-api:
   service-key: ${TOUR_API_KEY}
   mobile-app: wswg
   num-of-rows: 1000
+  schedule-cron: "0 0 4 * * MON"
   # 타임아웃/재시도는 TourApiProperties 기본값 사용 (필요 시 여기서 override)
   # connect-timeout-ms: 5000
   # read-timeout-ms: 10000
