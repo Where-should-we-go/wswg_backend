@@ -29,9 +29,11 @@ import com.ssafy.wswg.config.WebMvcConfig;
 import com.ssafy.wswg.controller.AttractionController;
 import com.ssafy.wswg.exception.CommonException;
 import com.ssafy.wswg.exception.ErrorCode;
+import com.ssafy.wswg.model.dto.AttractionDetailDto;
 import com.ssafy.wswg.model.dto.AttractionSearchCondition;
 import com.ssafy.wswg.model.dto.AttractionSummaryDto;
 import com.ssafy.wswg.model.dto.PagedResponse;
+import com.ssafy.wswg.model.service.AttractionDetailService;
 import com.ssafy.wswg.model.service.AttractionSearchService;
 import com.ssafy.wswg.model.service.AttractionService;
 import com.ssafy.wswg.security.JwtAuthenticationFilter;
@@ -60,6 +62,9 @@ class AttractionControllerTest {
 
     @MockBean
     private AttractionService attractionService;
+
+    @MockBean
+    private AttractionDetailService attractionDetailService;
 
     @Test
     void search_returns200WithPagedJson() throws Exception {
@@ -112,5 +117,34 @@ class AttractionControllerTest {
         verify(attractionSearchService).search(captor.capture(), anyInt(), anyInt());
         org.assertj.core.api.Assertions.assertThat(captor.getValue().getContentTypeIds())
                 .containsExactly(12, 14);
+    }
+
+    @Test
+    void getDetail_returns200WithJson() throws Exception {
+        AttractionDetailDto d = new AttractionDetailDto();
+        d.setContentId(126508);
+        d.setTitle("경복궁");
+        d.setSidoName("서울");
+        d.setContentTypeName("관광지");
+        d.setOverview("조선의 법궁");
+        d.setRestDate("매주 화요일");
+        given(attractionDetailService.getDetail(126508)).willReturn(d);
+
+        mockMvc.perform(get("/api/attractions/126508"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contentId").value(126508))
+                .andExpect(jsonPath("$.contentTypeName").value("관광지"))
+                .andExpect(jsonPath("$.overview").value("조선의 법궁"))
+                .andExpect(jsonPath("$.restDate").value("매주 화요일"));
+    }
+
+    @Test
+    void getDetail_notFound_returns404() throws Exception {
+        given(attractionDetailService.getDetail(999))
+                .willThrow(new CommonException(ErrorCode.NOT_FOUND_ATTRACTION));
+
+        mockMvc.perform(get("/api/attractions/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(40402));
     }
 }

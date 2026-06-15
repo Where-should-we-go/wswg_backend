@@ -27,6 +27,7 @@ public enum ErrorCode {
     // 404
     NOT_FOUND_GROUP(40400, HttpStatus.NOT_FOUND, "존재하지 않는 모임입니다."),
     NOT_FOUND_USER(40401, HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
+    NOT_FOUND_ATTRACTION(40402, HttpStatus.NOT_FOUND, "존재하지 않는 관광지입니다."),
 
     // 409
     TOUR_LOAD_ALREADY_RUNNING(40900, HttpStatus.CONFLICT, "관광정보 적재가 이미 진행 중입니다."),
@@ -38,7 +39,8 @@ public enum ErrorCode {
     TOUR_API_KEY_INVALID(50200, HttpStatus.BAD_GATEWAY, "TourAPI 서비스키가 유효하지 않습니다."),
     TOUR_API_QUOTA_EXCEEDED(50201, HttpStatus.BAD_GATEWAY, "TourAPI 일일 트래픽을 초과했습니다."),
     TOUR_LOAD_FAILED(50202, HttpStatus.BAD_GATEWAY, "관광정보 적재에 실패했습니다."),
-    EMBEDDING_REQUEST_FAILED(50203, HttpStatus.BAD_GATEWAY, "임베딩 생성에 실패했습니다.");
+    EMBEDDING_REQUEST_FAILED(50203, HttpStatus.BAD_GATEWAY, "임베딩 생성에 실패했습니다."),
+    TOUR_API_DETAIL_FAILED(50204, HttpStatus.BAD_GATEWAY, "관광지 상세 정보를 불러오지 못했습니다.");
 
     private final Integer code;
     private final HttpStatus httpStatus;
