@@ -94,4 +94,39 @@ class RegionDaoPgTest extends AbstractPostgisIntegrationTest {
                 .extracting(GugunDto::getGugunCode)
                 .containsExactlyInAnyOrder(91101, 91102);
     }
+
+    @Test
+    @DisplayName("selectSidos: 삽입한 시도를 sido_code 오름차순으로 읽어온다")
+    void selectSidos_readsInsertedRows() {
+        regionDao.upsertSidos(List.of(
+                new SidoDto(91002, "테스트시도B"),
+                new SidoDto(91001, "테스트시도A")));
+
+        assertThat(regionDao.selectSidos())
+                .filteredOn(s -> s.getSidoCode() == 91001 || s.getSidoCode() == 91002)
+                .extracting(SidoDto::getSidoCode)
+                .containsExactly(91001, 91002); // ORDER BY sido_code
+    }
+
+    @Test
+    @DisplayName("selectGugunsBySido: 해당 시도의 구군만 gugun_code 오름차순으로 반환")
+    void selectGugunsBySido_filtersBySido() {
+        regionDao.upsertSidos(List.of(
+                new SidoDto(91001, "테스트시도A"),
+                new SidoDto(91002, "테스트시도B")));
+        regionDao.upsertGuguns(List.of(
+                new GugunDto(91001, 91102, "테스트구2"),
+                new GugunDto(91001, 91101, "테스트구1"),
+                new GugunDto(91002, 91201, "다른시도구")));
+
+        assertThat(regionDao.selectGugunsBySido(91001))
+                .extracting(GugunDto::getGugunCode)
+                .containsExactly(91101, 91102); // 91002 시도의 구군은 제외, ORDER BY gugun_code
+    }
+
+    @Test
+    @DisplayName("selectGugunsBySido: 존재하지 않는 시도면 빈 목록")
+    void selectGugunsBySido_unknownSido_returnsEmpty() {
+        assertThat(regionDao.selectGugunsBySido(99999)).isEmpty();
+    }
 }
