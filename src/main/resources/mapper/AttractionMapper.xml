@@ -107,4 +107,69 @@
         LIMIT #{limit}
     </select>
 
+    <!--
+      검색 필터 공통 WHERE. search/countSearch가 함께 쓴다.
+      모든 조건은 attractions(a) 컬럼에만 걸리므로 COUNT에는 조인이 필요 없다.
+      keyword는 ILIKE(대소문자 무시) 부분일치. contentTypeIds는 IN(...) 다중 선택.
+    -->
+    <sql id="searchWhere">
+        <where>
+            <if test="cond.sidoCode != null">
+                AND a.sido_code = #{cond.sidoCode}
+            </if>
+            <!--
+              gugun_code는 전역 유일이 아니라 (sido_code, gugun_code) 복합키다.
+              sido 없이 gugun만 걸면 다른 시도의 동일 코드 구군까지 매칭되므로,
+              gugun 필터는 sido가 함께 있을 때만 적용한다(서비스 계층에서 이 조합을 강제).
+            -->
+            <if test="cond.gugunCode != null and cond.sidoCode != null">
+                AND a.gugun_code = #{cond.gugunCode}
+            </if>
+            <if test="cond.contentTypeIds != null and cond.contentTypeIds.size() > 0">
+                AND a.content_type_id IN
+                <foreach collection="cond.contentTypeIds" item="ctId" open="(" separator="," close=")">
+                    #{ctId}
+                </foreach>
+            </if>
+            <!--
+              keyword는 리터럴 부분일치. ILIKE 와일드카드(%, _)와 이스케이프 문자(\)를
+              먼저 이스케이프해 사용자가 '50%' 같은 문자를 그대로 검색하게 한다.
+              replace 순서 주의: \를 가장 먼저(이후 추가되는 \가 다시 치환되지 않도록).
+            -->
+            <if test="cond.keyword != null and cond.keyword != ''">
+                AND a.title ILIKE '%' ||
+                    replace(replace(replace(#{cond.keyword}, '\', '\\'), '%', '\%'), '_', '\_')
+                    || '%' ESCAPE '\'
+            </if>
+        </where>
+    </sql>
+
+    <!--
+      검색 결과 카드용 요약 조회. 지역명은 LEFT JOIN으로 채운다
+      (일부 attraction은 sido_code/gugun_code가 null이라 INNER JOIN하면 누락됨).
+      ORDER BY a.no: PK 기준 안정 정렬 → 페이징 시 행 누락/중복 방지.
+    -->
+    <select id="search" resultType="com.ssafy.wswg.model.dto.AttractionSummaryDto">
+        SELECT a.content_id      AS contentId,
+               a.title           AS title,
+               s.sido_name       AS sidoName,
+               g.gugun_name      AS gugunName,
+               a.content_type_id AS contentTypeId,
+               a.first_image1    AS firstImage1
+        FROM attractions a
+        LEFT JOIN sidos s
+            ON a.sido_code = s.sido_code
+        LEFT JOIN guguns g
+            ON a.sido_code = g.sido_code AND a.gugun_code = g.gugun_code
+        <include refid="searchWhere"/>
+        ORDER BY a.no
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countSearch" resultType="long">
+        SELECT COUNT(*)
+        FROM attractions a
+        <include refid="searchWhere"/>
+    </select>
+
 </mapper>
