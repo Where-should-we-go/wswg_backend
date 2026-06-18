@@ -60,7 +60,7 @@ public class AttractionService {
                 normalizedRadiusMeters,
                 request.getContentTypeId(),
                 queryEmbedding,
-                EMBEDDING_MODEL,
+                openAiEmbeddingClient.getEmbeddingModel(),
                 normalizedLimit);
     }
 
