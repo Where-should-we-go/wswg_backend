@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- 공용 트리거 함수: UPDATE 시 updated_at 자동 갱신
 CREATE OR REPLACE FUNCTION set_updated_at() RETURNS trigger AS $$
@@ -67,6 +68,21 @@ CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(sido_code
 CREATE INDEX IF NOT EXISTS idx_attractions_content_type ON attractions(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_attractions_title        ON attractions(title);
 CREATE INDEX IF NOT EXISTS idx_attractions_geom         ON attractions USING GIST(geom);
+CREATE INDEX IF NOT EXISTS idx_attractions_geog         ON attractions USING GIST((geom::geography));
+
+CREATE TABLE IF NOT EXISTS attraction_embeddings (
+    id BIGSERIAL PRIMARY KEY,
+    content_id INTEGER NOT NULL REFERENCES attractions(content_id) ON DELETE CASCADE,
+    embedding vector(1536) NOT NULL,
+    embedding_text TEXT NOT NULL,
+    embedding_model VARCHAR(100) NOT NULL DEFAULT 'text-embedding-3-small',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (content_id, embedding_model)
+);
+CREATE INDEX IF NOT EXISTS idx_attraction_embeddings_hnsw_cos
+    ON attraction_embeddings
+    USING hnsw (embedding vector_cosine_ops);
 
 -- ============================================================
 -- 모임
