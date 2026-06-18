@@ -33,6 +33,7 @@ import com.ssafy.wswg.model.dto.AttractionSearchCondition;
 import com.ssafy.wswg.model.dto.AttractionSummaryDto;
 import com.ssafy.wswg.model.dto.PagedResponse;
 import com.ssafy.wswg.model.service.AttractionSearchService;
+import com.ssafy.wswg.model.service.AttractionService;
 import com.ssafy.wswg.security.JwtAuthenticationFilter;
 
 /**
@@ -56,6 +57,9 @@ class AttractionControllerTest {
 
     @MockBean
     private AttractionSearchService attractionSearchService;
+
+    @MockBean
+    private AttractionService attractionService;
 
     @Test
     void search_returns200WithPagedJson() throws Exception {
@@ -90,7 +94,7 @@ class AttractionControllerTest {
 
         mockMvc.perform(get("/api/attractions").param("page", "-1"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value(40004));
+                .andExpect(jsonPath("$.code").value(40006));
     }
 
     @Test

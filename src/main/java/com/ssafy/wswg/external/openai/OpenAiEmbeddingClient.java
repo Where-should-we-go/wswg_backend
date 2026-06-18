@@ -53,6 +53,11 @@ public class OpenAiEmbeddingClient {
         }
     }
 
+    /** 사용 중인 임베딩 모델명. 의미 기반 추천이 attraction_embeddings 매칭에 쓴다. */
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
     private record EmbeddingRequest(String model, String input) {
     }
 
