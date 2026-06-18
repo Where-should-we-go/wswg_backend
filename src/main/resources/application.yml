@@ -87,6 +87,6 @@ tour-api:
   # retry-backoff-ms: 1000
 
 openai:
-  api-key: ${OPENAI_API_KEY:}
+  api-key: ${OPENAI_API_KEY:}                 # 값으로 GMS Key를 주입
   embedding-model: text-embedding-3-small
-  embedding-url: https://api.openai.com/v1/embeddings
+  embedding-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings
