@@ -2,14 +2,14 @@ package com.ssafy.wswg.controller;
 
 import java.util.List;
 
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ssafy.wswg.model.dto.AttractionSearchCondition;
+import com.ssafy.wswg.model.dto.AttractionSearchRequest;
 import com.ssafy.wswg.model.dto.AttractionSummaryDto;
 import com.ssafy.wswg.model.dto.NearbyAttractionDto;
 import com.ssafy.wswg.model.dto.NearbyAttractionRecommendRequestDto;
@@ -34,17 +34,9 @@ public class AttractionController {
 
     @GetMapping
     public ResponseEntity<PagedResponse<AttractionSummaryDto>> search(
-            @RequestParam(required = false) Integer sidoCode,
-            @RequestParam(required = false) Integer gugunCode,
-            @RequestParam(required = false) List<Integer> contentTypeId,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-
-        AttractionSearchCondition cond =
-                new AttractionSearchCondition(sidoCode, gugunCode, contentTypeId, keyword);
-
-        return ResponseEntity.ok(attractionSearchService.search(cond, page, size));
+            @ParameterObject AttractionSearchRequest request) {
+        return ResponseEntity.ok(attractionSearchService.search(
+                request.toCondition(), request.getPage(), request.getSize()));
     }
 
     @GetMapping("/recommend/nearby")
