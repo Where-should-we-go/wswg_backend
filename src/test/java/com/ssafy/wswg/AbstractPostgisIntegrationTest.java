@@ -5,6 +5,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
 
@@ -47,9 +48,22 @@ import org.testcontainers.containers.wait.strategy.Wait;
 @Transactional
 public abstract class AbstractPostgisIntegrationTest {
 
-    /** PostGIS 16-3.4 이미지. postgres 와 호환되도록 asCompatibleSubstituteFor 지정. */
+    // postgis/postgis 이미지엔 pgvector가 없어, schema.sql의 CREATE EXTENSION vector가
+    // initdb에서 실패한다(추천 기능이 attraction_embeddings에 vector(1536)를 쓴다).
+    // postgis 이미지 위에 postgresql-16-pgvector를 설치한 커스텀 이미지를 빌드해 둘 다 충족시킨다.
+    // 고정 태그 + deleteOnExit=false라 재실행 시 빌드 캐시를 재사용한다(매번 apt 설치 안 함).
+    static final String PG_IMAGE = new ImageFromDockerfile("wswg-postgis-pgvector:16-3.4", false)
+            .withDockerfileFromBuilder(builder -> builder
+                    .from("postgis/postgis:16-3.4")
+                    .run("apt-get update "
+                            + "&& apt-get install -y --no-install-recommends postgresql-16-pgvector "
+                            + "&& rm -rf /var/lib/apt/lists/*")
+                    .build())
+            .get();
+
+    /** PostGIS + pgvector 커스텀 이미지. postgres 와 호환되도록 asCompatibleSubstituteFor 지정. */
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
-            DockerImageName.parse("postgis/postgis:16-3.4")
+            DockerImageName.parse(PG_IMAGE)
                     .asCompatibleSubstituteFor("postgres"))
             .withDatabaseName("wswg")
             .withUsername("wswg")

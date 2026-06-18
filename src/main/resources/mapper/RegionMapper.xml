@@ -32,4 +32,17 @@
         FROM guguns
     </select>
 
+    <select id="selectSidos" resultType="com.ssafy.wswg.model.dto.SidoDto">
+        SELECT sido_code, sido_name
+        FROM sidos
+        ORDER BY sido_code
+    </select>
+
+    <select id="selectGugunsBySido" resultType="com.ssafy.wswg.model.dto.GugunDto">
+        SELECT sido_code, gugun_code, gugun_name
+        FROM guguns
+        WHERE sido_code = #{sidoCode}
+        ORDER BY gugun_code
+    </select>
+
 </mapper>
