@@ -18,6 +18,7 @@ public enum ErrorCode {
     INVALID_PAGINATION(40006, HttpStatus.BAD_REQUEST, "page는 0 이상, size는 1 이상이어야 합니다."),
     INVALID_TRIP_SCOPE(40007, HttpStatus.BAD_REQUEST, "scope는 mine 또는 joined만 사용할 수 있습니다."),
     INVALID_TRIP_STATUS(40008, HttpStatus.BAD_REQUEST, "status는 UPCOMING, ONGOING, COMPLETED만 사용할 수 있습니다."),
+    INVALID_TRIP_REQUEST(40009, HttpStatus.BAD_REQUEST, "여행 계획 요청 값을 확인해 주세요."),
 
     // 401
     UNAUTHORIZED(40100, HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
@@ -25,11 +26,13 @@ public enum ErrorCode {
     // 403
     GROUP_OWNER_REQUIRED(40300, HttpStatus.FORBIDDEN, "모임장만 처리할 수 있습니다."),
     GROUP_MEMBER_REQUIRED(40301, HttpStatus.FORBIDDEN, "모임 멤버만 조회할 수 있습니다."),
+    TRIP_ACCESS_DENIED(40302, HttpStatus.FORBIDDEN, "여행 계획에 접근할 권한이 없습니다."),
 
     // 404
     NOT_FOUND_GROUP(40400, HttpStatus.NOT_FOUND, "존재하지 않는 모임입니다."),
     NOT_FOUND_USER(40401, HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
     NOT_FOUND_ATTRACTION(40402, HttpStatus.NOT_FOUND, "존재하지 않는 관광지입니다."),
+    NOT_FOUND_TRIP(40403, HttpStatus.NOT_FOUND, "존재하지 않는 여행 계획입니다."),
 
     // 409
     TOUR_LOAD_ALREADY_RUNNING(40900, HttpStatus.CONFLICT, "관광정보 적재가 이미 진행 중입니다."),

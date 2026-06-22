@@ -31,6 +31,33 @@
         <include refid="TripStatusCase"/> AS status
     </sql>
 
+    <resultMap id="TripResultMap" type="com.ssafy.wswg.model.dto.TripDto">
+        <id property="tripId" column="trip_id"/>
+        <result property="title" column="title"/>
+        <result property="startDate" column="start_date"/>
+        <result property="endDate" column="end_date"/>
+        <result property="userId" column="user_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="groupName" column="group_name"/>
+        <result property="data" column="data"
+                typeHandler="com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="TripColumns">
+        t.trip_id,
+        t.title,
+        t.start_date,
+        t.end_date,
+        t.user_id,
+        t.group_id,
+        g.group_name,
+        t.data,
+        t.created_at,
+        t.updated_at
+    </sql>
+
     <select id="readMyTrips" resultType="com.ssafy.wswg.model.dto.MyPageTripResponse">
         SELECT
             <include refid="MyPageTripColumns"/>
@@ -66,5 +93,78 @@
             t.created_at DESC,
             t.trip_id DESC
     </select>
+
+    <insert id="createTrip"
+            parameterType="com.ssafy.wswg.model.dto.TripDto"
+            useGeneratedKeys="true"
+            keyProperty="tripId"
+            keyColumn="trip_id">
+        INSERT INTO trips (
+            title,
+            start_date,
+            end_date,
+            user_id,
+            group_id,
+            data
+        )
+        VALUES (
+            #{title},
+            #{startDate},
+            #{endDate},
+            #{userId},
+            #{groupId},
+            #{data,typeHandler=com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler}::jsonb
+        )
+    </insert>
+
+    <select id="readTripById" resultMap="TripResultMap">
+        SELECT
+            <include refid="TripColumns"/>
+        FROM trips t
+        LEFT JOIN groups g
+            ON g.group_id = t.group_id
+        WHERE t.trip_id = #{tripId}
+    </select>
+
+    <select id="readTripsByUserId" resultMap="TripResultMap">
+        SELECT
+            <include refid="TripColumns"/>
+        FROM trips t
+        LEFT JOIN groups g
+            ON g.group_id = t.group_id
+        WHERE t.user_id = #{userId}
+        ORDER BY
+            t.start_date ASC NULLS LAST,
+            t.created_at DESC,
+            t.trip_id DESC
+    </select>
+
+    <select id="readTripsByGroupId" resultMap="TripResultMap">
+        SELECT
+            <include refid="TripColumns"/>
+        FROM trips t
+        INNER JOIN groups g
+            ON g.group_id = t.group_id
+        WHERE t.group_id = #{groupId}
+        ORDER BY
+            t.start_date ASC NULLS LAST,
+            t.created_at DESC,
+            t.trip_id DESC
+    </select>
+
+    <update id="updateTrip" parameterType="com.ssafy.wswg.model.dto.TripDto">
+        UPDATE trips
+        SET
+            title = #{title},
+            start_date = #{startDate},
+            end_date = #{endDate},
+            data = #{data,typeHandler=com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler}::jsonb
+        WHERE trip_id = #{tripId}
+    </update>
+
+    <delete id="deleteTrip">
+        DELETE FROM trips
+        WHERE trip_id = #{tripId}
+    </delete>
 
 </mapper>

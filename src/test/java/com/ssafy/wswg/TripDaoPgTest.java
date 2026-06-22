@@ -2,6 +2,7 @@ package com.ssafy.wswg;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -12,11 +13,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.wswg.model.dao.TripDao;
 import com.ssafy.wswg.model.dto.MyPageTripResponse;
+import com.ssafy.wswg.model.dto.TripDto;
 import com.ssafy.wswg.model.dto.TripStatus;
 
 class TripDaoPgTest extends AbstractPostgisIntegrationTest {
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
     JdbcTemplate jdbc;
@@ -78,6 +83,63 @@ class TripDaoPgTest extends AbstractPostgisIntegrationTest {
         assertThat(trips.get(0).getStatusLabel()).isEqualTo("여행중");
     }
 
+    @Test
+    void createTripAndReadTripById_roundTripsJsonbData() {
+        Long userId = insertUser("trip-owner@example.com");
+
+        TripDto trip = new TripDto();
+        trip.setTitle("제주 여행");
+        trip.setStartDate(LocalDate.of(2026, 7, 1));
+        trip.setEndDate(LocalDate.of(2026, 7, 3));
+        trip.setUserId(userId);
+        ObjectNode data = objectMapper.createObjectNode();
+        data.putArray("items")
+                .addObject()
+                .put("title", "협재해수욕장");
+        trip.setData(data);
+
+        tripDao.createTrip(trip);
+
+        TripDto found = tripDao.readTripById(trip.getTripId());
+
+        assertThat(found.getTitle()).isEqualTo("제주 여행");
+        assertThat(found.getUserId()).isEqualTo(userId);
+        assertThat(found.getData().get("items").get(0).get("title").asText()).isEqualTo("협재해수욕장");
+    }
+
+    @Test
+    void readTripsByGroupId_returnsOnlyGroupTrips() {
+        Long ownerId = insertUser("trip-group-owner@example.com");
+        Long groupId = insertGroup("여행 모임", ownerId);
+        Long otherGroupId = insertGroup("다른 모임", ownerId);
+        insertGroupTrip("모임 여행", groupId);
+        insertGroupTrip("다른 모임 여행", otherGroupId);
+
+        List<TripDto> trips = tripDao.readTripsByGroupId(groupId);
+
+        assertThat(trips).extracting(TripDto::getTitle)
+                .containsExactly("모임 여행");
+        assertThat(trips.get(0).getGroupName()).isEqualTo("여행 모임");
+    }
+
+    @Test
+    void updateTripAndDeleteTrip_modifyPersistedTrip() {
+        Long userId = insertUser("trip-update-owner@example.com");
+        TripDto trip = insertPersonalTrip("수정 전", userId);
+
+        trip.setTitle("수정 후");
+        trip.setStartDate(LocalDate.of(2026, 8, 1));
+        trip.setEndDate(LocalDate.of(2026, 8, 2));
+        trip.setData(objectMapper.createObjectNode().put("memo", "updated"));
+
+        assertThat(tripDao.updateTrip(trip)).isEqualTo(1);
+        assertThat(tripDao.readTripById(trip.getTripId()).getTitle()).isEqualTo("수정 후");
+        assertThat(tripDao.readTripById(trip.getTripId()).getData().get("memo").asText()).isEqualTo("updated");
+
+        assertThat(tripDao.deleteTrip(trip.getTripId())).isEqualTo(1);
+        assertThat(tripDao.readTripById(trip.getTripId())).isNull();
+    }
+
     private Long insertUser(String email) {
         return jdbc.queryForObject(
                 "INSERT INTO users (email, name) VALUES (?, ?) RETURNING id",
@@ -119,5 +181,24 @@ class TripDaoPgTest extends AbstractPostgisIntegrationTest {
                 startOffset,
                 endOffset,
                 groupId);
+    }
+
+    private void insertGroupTrip(String title, Long groupId) {
+        jdbc.update(
+                "INSERT INTO trips (title, start_date, end_date, group_id, data) "
+                        + "VALUES (?, CURRENT_DATE, CURRENT_DATE + INTERVAL '1 day', ?, '{}'::jsonb)",
+                title,
+                groupId);
+    }
+
+    private TripDto insertPersonalTrip(String title, Long userId) {
+        TripDto trip = new TripDto();
+        trip.setTitle(title);
+        trip.setStartDate(LocalDate.of(2026, 7, 1));
+        trip.setEndDate(LocalDate.of(2026, 7, 3));
+        trip.setUserId(userId);
+        trip.setData(objectMapper.createObjectNode());
+        tripDao.createTrip(trip);
+        return trip;
     }
 }
