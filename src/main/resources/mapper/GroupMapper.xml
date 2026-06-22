@@ -99,6 +99,63 @@
         ORDER BY owner DESC, ug.joined_at ASC, u.id ASC
     </select>
 
+    <select id="readFootprints" resultType="com.ssafy.wswg.model.dto.GroupFootprintDto">
+        WITH completed_trip_regions AS (
+            SELECT
+                t.trip_id,
+                a.sido_code,
+                a.gugun_code,
+                COUNT(*)::integer AS attraction_count
+            FROM trips t
+            CROSS JOIN LATERAL jsonb_array_elements(
+                CASE
+                    WHEN jsonb_typeof(t.data -&gt; 'items') = 'array' THEN t.data -&gt; 'items'
+                    ELSE '[]'::jsonb
+                END
+            ) item
+            INNER JOIN attractions a
+                ON a.content_id = CASE
+                    WHEN COALESCE(item -&gt;&gt; 'content_id', item -&gt;&gt; 'contentId') ~ '^[0-9]+$'
+                        THEN COALESCE(item -&gt;&gt; 'content_id', item -&gt;&gt; 'contentId')::integer
+                    ELSE NULL
+                END
+            WHERE t.group_id = #{groupId}
+              AND t.end_date &lt; CURRENT_DATE
+              AND a.sido_code IS NOT NULL
+            GROUP BY t.trip_id, a.sido_code, a.gugun_code
+        )
+        SELECT
+            ctr.sido_code,
+            s.sido_name,
+            ctr.gugun_code,
+            g.gugun_name,
+            COUNT(DISTINCT ctr.trip_id)::integer AS visit_count,
+            SUM(ctr.attraction_count)::integer AS attraction_count,
+            grm.media_type AS representative_media_type,
+            grm.media_url AS representative_media_url,
+            ST_Y(grm.geom) AS latitude,
+            ST_X(grm.geom) AS longitude
+        FROM completed_trip_regions ctr
+        INNER JOIN sidos s
+            ON s.sido_code = ctr.sido_code
+        LEFT JOIN guguns g
+            ON g.sido_code = ctr.sido_code
+           AND g.gugun_code = ctr.gugun_code
+        LEFT JOIN group_region_media grm
+            ON grm.group_id = #{groupId}
+           AND grm.sido_code = ctr.sido_code
+           AND COALESCE(grm.gugun_code, -1) = COALESCE(ctr.gugun_code, -1)
+        GROUP BY
+            ctr.sido_code,
+            s.sido_name,
+            ctr.gugun_code,
+            g.gugun_name,
+            grm.media_type,
+            grm.media_url,
+            grm.geom
+        ORDER BY visit_count DESC, attraction_count DESC, ctr.sido_code ASC, ctr.gugun_code ASC
+    </select>
+
     <update id="updateGroupName">
         UPDATE groups
         SET group_name = #{groupName}

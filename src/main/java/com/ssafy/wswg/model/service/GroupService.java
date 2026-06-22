@@ -15,6 +15,7 @@ import com.ssafy.wswg.exception.ErrorCode;
 import com.ssafy.wswg.model.dao.GroupDao;
 import com.ssafy.wswg.model.dto.GroupCreateRequestDto;
 import com.ssafy.wswg.model.dto.GroupDto;
+import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
@@ -66,6 +67,12 @@ public class GroupService {
         validateMember(groupId, userId);
 
         return groupDao.readMembers(groupId);
+    }
+
+    public List<GroupFootprintDto> readFootprints(Long groupId, Long userId) {
+        validateMember(groupId, userId);
+
+        return groupDao.readFootprints(groupId);
     }
 
     @Transactional

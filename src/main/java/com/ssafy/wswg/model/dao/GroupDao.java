@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
 
@@ -27,6 +28,8 @@ public interface GroupDao {
     int countUserById(@Param("userId") Long userId);
 
     List<GroupMemberDto> readMembers(@Param("groupId") Long groupId);
+
+    List<GroupFootprintDto> readFootprints(@Param("groupId") Long groupId);
 
     int updateGroupName(@Param("groupId") Long groupId, @Param("groupName") String groupName);
 
