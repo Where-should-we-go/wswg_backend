@@ -90,7 +90,7 @@ class MyPageControllerTest {
         private List<MyPageTripResponse> trips = List.of();
 
         RecordingTripService() {
-            super(null);
+            super(null, null);
         }
 
         @Override

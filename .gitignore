@@ -33,6 +33,7 @@ build/
 .vscode/
 
 .env
+.gh-config/
 .DS_Store
 
 ### AI 도구 (Claude/Codex/Gemini) ###
