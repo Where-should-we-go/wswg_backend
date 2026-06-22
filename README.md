@@ -2,6 +2,32 @@
 
 > 여행 계획을 자동으로 생성하고, 함께 수정,기록 할 수 있는 협업형 여행 플래너 서비스
 
+## 🚀 시작하기 전에 (필독)
+
+이 레포는 **사람 + AI 도구(Claude Code / Codex / Gemini)** 가 함께 작업합니다. 합류하면 아래를 먼저 보세요.
+
+- **[AGENTS.md](./AGENTS.md)** ← 기술 스택·명령어·Git 작업 방식·커밋/PR 규칙·도메인 용어의 **단일 원본**.
+- AI 도구는 이 규칙을 **자동으로** 읽습니다:
+  - Claude Code → `CLAUDE.md` (→ `@AGENTS.md` import)
+  - Gemini CLI → `GEMINI.md` (→ `@AGENTS.md` import)
+  - Codex → `AGENTS.md` 직접 인식
+  - 즉 세 도구 모두 **같은 규칙**으로 동작합니다. 별도 설정 불필요.
+- 사람은 AGENTS.md를 통독하고, 최초 1회 로컬 설정을 실행하세요:
+  ```bash
+  git config pull.rebase true
+  git config branch.autoSetupRebase always
+  ```
+
+### 빠른 명령어
+```bash
+./mvnw spring-boot:run      # 실행
+./mvnw -B verify            # 빌드 + 전체 테스트 (Docker 필요)
+```
+
+> 작업 방식(GitHub Flow, merge 전 rebase, TDD, 커밋 컨벤션)의 자세한 규칙은 모두 [AGENTS.md](./AGENTS.md)에 있습니다.
+
+---
+
 ## 1. 프로젝트 소개
 
 **어디갈래?**는 여행을 준비하는 과정에서 발생하는 번거로움을 줄이기 위한 서비스입니다.

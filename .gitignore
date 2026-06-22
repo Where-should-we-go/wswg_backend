@@ -35,6 +35,10 @@ build/
 .env
 .DS_Store
 
+### AI 도구 (Claude/Codex/Gemini) ###
+# 개인 로컬 설정만 제외. 공유 설정·AGENTS.md·CLAUDE.md·GEMINI.md는 커밋한다.
+.claude/settings.local.json
+
 ### DB ###
 # 파괴적 초기화 스크립트 — 커밋 금지 (footgun 방지, 로컬 전용). 초기화는 README §2 참고
 **/db/postgres/reset.sql
