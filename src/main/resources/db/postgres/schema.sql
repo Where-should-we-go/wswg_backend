@@ -59,11 +59,18 @@ CREATE TABLE IF NOT EXISTS attractions (
     addr2 TEXT,
     homepage TEXT,
     overview TEXT,
+    rest_date TEXT,            -- 휴무일(detailIntro2 restdate*). A-6 write-through가 채움.
+                               -- NULL=미조회, ''=조회완료·휴무정보없음(재조회 방지 센티넬)
     modified_time TIMESTAMP,   -- TourAPI modifiedtime: A-6 캐시 무효화 신호
     CONSTRAINT fk_attractions_guguns
         FOREIGN KEY (sido_code, gugun_code)
         REFERENCES guguns(sido_code, gugun_code)
 );
+-- 기존 DB 업그레이드용(idempotent). CREATE TABLE IF NOT EXISTS는 이미 있는 테이블에
+-- 신규 컬럼을 추가하지 않으므로, write-through 캐시 컬럼은 ALTER로도 보강한다
+-- (신규 DB에선 위 CREATE가 이미 만들어 no-op). groups.owner_id와 동일 패턴.
+ALTER TABLE attractions
+    ADD COLUMN IF NOT EXISTS rest_date TEXT;
 CREATE INDEX IF NOT EXISTS idx_attractions_region       ON attractions(sido_code, gugun_code);
 CREATE INDEX IF NOT EXISTS idx_attractions_content_type ON attractions(content_type_id);
 CREATE INDEX IF NOT EXISTS idx_attractions_title        ON attractions(title);

@@ -1,0 +1,22 @@
+{
+  "response": {
+    "header": { "resultCode": "0000", "resultMsg": "OK" },
+    "body": {
+      "items": {
+        "item": [
+          {
+            "contentid": "126508",
+            "contenttypeid": "12",
+            "restdate": "매주 화요일",
+            "useseason": "",
+            "usetime": "09:00~18:00",
+            "infocenter": "02-3700-3900"
+          }
+        ]
+      },
+      "numOfRows": 1,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

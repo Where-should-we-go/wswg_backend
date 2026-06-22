@@ -23,6 +23,8 @@ import org.springframework.web.client.RestClient;
 import com.ssafy.wswg.external.tour.TourApiException.TourApiErrorType;
 import com.ssafy.wswg.external.tour.dto.AreaBasedItem;
 import com.ssafy.wswg.external.tour.dto.AreaBasedPage;
+import com.ssafy.wswg.external.tour.dto.DetailCommonItem;
+import com.ssafy.wswg.external.tour.dto.DetailIntroItem;
 import com.ssafy.wswg.external.tour.dto.LdongItem;
 
 /**
@@ -146,6 +148,60 @@ class TourApiClientTest {
         assertThat(page.getItems()).hasSize(1);
         assertThat(page.getItems().get(0).getContentid()).isEqualTo("3102220");
         assertThat(page.getTotalCount()).isEqualTo(1);
+        server.verify();
+    }
+
+    @Test
+    void fetchDetailCommon_parsesOverviewAndExtractsHomepageHref() {
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("/detailCommon2")))
+                .andExpect(queryParam("contentId", "126128"))
+                .andRespond(withSuccess(fixture("detail-common.json"), MediaType.APPLICATION_JSON));
+
+        DetailCommonItem item = client.fetchDetailCommon(126128);
+
+        assertThat(item).isNotNull();
+        assertThat(item.getContentid()).isEqualTo("126128");
+        assertThat(item.getOverview()).startsWith("동촌유원지는 대구시 동쪽");
+        // homepage는 <a href="...">label</a> 앵커 → href URL만 추출
+        assertThat(item.homepageUrl())
+                .isEqualTo("https://tour.daegu.go.kr/index.do?menu_id=00002942");
+        server.verify();
+    }
+
+    @Test
+    void fetchDetailCommon_emptyItems_returnsNull() {
+        // contentId가 TourAPI에 없으면 items:""(빈 문자열) → null
+        String body = "{\"response\":{\"header\":{\"resultCode\":\"0000\",\"resultMsg\":\"OK\"},"
+                + "\"body\":{\"items\":\"\",\"numOfRows\":0,\"pageNo\":1,\"totalCount\":0}}}";
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("/detailCommon2")))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThat(client.fetchDetailCommon(99999999)).isNull();
+        server.verify();
+    }
+
+    @Test
+    void fetchDetailIntro_sendsContentTypeId_andParsesRestDate() {
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("/detailIntro2")))
+                .andExpect(queryParam("contentId", "126508"))
+                .andExpect(queryParam("contentTypeId", "12"))
+                .andRespond(withSuccess(fixture("detail-intro.json"), MediaType.APPLICATION_JSON));
+
+        DetailIntroItem item = client.fetchDetailIntro(126508, 12);
+
+        assertThat(item).isNotNull();
+        assertThat(item.restDateFor(12)).isEqualTo("매주 화요일");
+        server.verify();
+    }
+
+    @Test
+    void fetchDetailIntro_emptyItems_returnsNull() {
+        String body = "{\"response\":{\"header\":{\"resultCode\":\"0000\",\"resultMsg\":\"OK\"},"
+                + "\"body\":{\"items\":\"\",\"numOfRows\":0,\"pageNo\":1,\"totalCount\":0}}}";
+        server.expect(requestTo(org.hamcrest.Matchers.containsString("/detailIntro2")))
+                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
+
+        assertThat(client.fetchDetailIntro(99999999, 12)).isNull();
         server.verify();
     }
 
