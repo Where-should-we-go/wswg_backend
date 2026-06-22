@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.wswg.model.dao.TripDao">
+
+    <sql id="TripStatusCase">
+        CASE
+            WHEN t.end_date IS NOT NULL
+             AND t.end_date &lt; CURRENT_DATE THEN 'COMPLETED'
+            WHEN t.start_date IS NOT NULL
+             AND t.start_date &gt; CURRENT_DATE THEN 'UPCOMING'
+            WHEN t.start_date IS NOT NULL
+             AND t.end_date IS NOT NULL
+             AND CURRENT_DATE BETWEEN t.start_date AND t.end_date THEN 'ONGOING'
+            ELSE 'UPCOMING'
+        END
+    </sql>
+
+    <sql id="MyPageTripColumns">
+        t.trip_id,
+        t.title,
+        t.start_date,
+        t.end_date,
+        t.user_id,
+        t.group_id,
+        g.group_name,
+        t.created_at,
+        t.updated_at,
+        <include refid="TripStatusCase"/> AS status
+    </sql>
+
+    <select id="readMyTrips" resultType="com.ssafy.wswg.model.dto.MyPageTripResponse">
+        SELECT
+            <include refid="MyPageTripColumns"/>
+        FROM trips t
+        LEFT JOIN groups g
+            ON g.group_id = t.group_id
+        WHERE t.user_id = #{userId}
+        <if test="status != null">
+            AND <include refid="TripStatusCase"/> = #{status}
+        </if>
+        ORDER BY
+            t.start_date ASC NULLS LAST,
+            t.created_at DESC,
+            t.trip_id DESC
+    </select>
+
+    <select id="readJoinedTrips" resultType="com.ssafy.wswg.model.dto.MyPageTripResponse">
+        SELECT
+            <include refid="MyPageTripColumns"/>
+        FROM trips t
+        INNER JOIN user_group ug
+            ON ug.group_id = t.group_id
+           AND ug.user_id = #{userId}
+        INNER JOIN groups g
+            ON g.group_id = t.group_id
+        <where>
+            <if test="status != null">
+                <include refid="TripStatusCase"/> = #{status}
+            </if>
+        </where>
+        ORDER BY
+            t.start_date ASC NULLS LAST,
+            t.created_at DESC,
+            t.trip_id DESC
+    </select>
+
+</mapper>
