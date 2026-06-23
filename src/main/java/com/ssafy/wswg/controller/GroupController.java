@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ssafy.wswg.model.dto.GroupCreateRequestDto;
 import com.ssafy.wswg.model.dto.GroupDto;
+import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
@@ -67,6 +68,13 @@ public class GroupController {
             @LoginUserId Long userId,
             @PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.readMembers(groupId, userId));
+    }
+
+    @GetMapping("/{groupId}/footprint")
+    public ResponseEntity<List<GroupFootprintDto>> readFootprints(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId) {
+        return ResponseEntity.ok(groupService.readFootprints(groupId, userId));
     }
 
     @PostMapping("/{groupId}/members")
