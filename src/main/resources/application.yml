@@ -90,3 +90,14 @@ openai:
   api-key: ${OPENAI_API_KEY:}                 # 값으로 GMS Key를 주입
   embedding-model: text-embedding-3-small
   embedding-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings
+
+oci:
+  object-storage:
+    region: ${OCI_REGION:}
+    namespace: ${OCI_NAMESPACE:}
+    bucket: ${OCI_BUCKET:}
+    public-base-url: ${OCI_PUBLIC_BASE_URL:}
+    tenancy-ocid: ${OCI_TENANCY_OCID:}
+    user-ocid: ${OCI_USER_OCID:}
+    fingerprint: ${OCI_FINGERPRINT:}
+    private-key-path: ${OCI_PRIVATE_KEY_PATH:}

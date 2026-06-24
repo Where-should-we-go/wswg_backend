@@ -18,6 +18,8 @@ import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
+import com.ssafy.wswg.model.dto.GroupMediaDto;
+import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
 import com.ssafy.wswg.model.dto.GroupUpdateRequestDto;
@@ -73,6 +75,12 @@ public class GroupService {
         validateMember(groupId, userId);
 
         return groupDao.readFootprints(groupId);
+    }
+
+    public List<GroupMediaDto> readMedia(Long groupId, Long userId, GroupMediaRequest request) {
+        validateMember(groupId, userId);
+
+        return groupDao.readMedia(groupId, normalizeMediaRequest(request));
     }
 
     @Transactional
@@ -198,6 +206,33 @@ public class GroupService {
         }
 
         return token.trim();
+    }
+
+    private String normalizeMediaType(String mediaType) {
+        if (mediaType == null || mediaType.isBlank()) {
+            return null;
+        }
+
+        String normalizedMediaType = mediaType.trim().toUpperCase();
+        if (!List.of("PHOTO", "AUDIO", "VIDEO").contains(normalizedMediaType)) {
+            throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+        }
+
+        return normalizedMediaType;
+    }
+
+    private GroupMediaRequest normalizeMediaRequest(GroupMediaRequest request) {
+        GroupMediaRequest normalizedRequest = new GroupMediaRequest();
+        if (request == null) {
+            return normalizedRequest;
+        }
+
+        normalizedRequest.setSidoCode(request.getSidoCode());
+        normalizedRequest.setGugunCode(request.getGugunCode());
+        normalizedRequest.setContentId(request.getContentId());
+        normalizedRequest.setMediaType(normalizeMediaType(request.getMediaType()));
+
+        return normalizedRequest;
     }
 
     private String generateInviteToken() {
