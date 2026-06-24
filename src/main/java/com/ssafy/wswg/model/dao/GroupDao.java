@@ -5,8 +5,10 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupDto;
+import com.ssafy.wswg.model.dto.GroupFootprintDto;
+import com.ssafy.wswg.model.dto.GroupMediaDto;
+import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
 
 @Mapper
@@ -30,6 +32,8 @@ public interface GroupDao {
     List<GroupMemberDto> readMembers(@Param("groupId") Long groupId);
 
     List<GroupFootprintDto> readFootprints(@Param("groupId") Long groupId);
+
+    List<GroupMediaDto> readMedia(@Param("groupId") Long groupId, @Param("request") GroupMediaRequest request);
 
     int updateGroupName(@Param("groupId") Long groupId, @Param("groupName") String groupName);
 

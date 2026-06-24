@@ -19,6 +19,8 @@ import com.ssafy.wswg.model.dao.TripDao;
 import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
+import com.ssafy.wswg.model.dto.GroupMediaDto;
+import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.MyPageTripResponse;
 import com.ssafy.wswg.model.dto.TripCreateRequestDto;
 import com.ssafy.wswg.model.dto.TripDto;
@@ -294,6 +296,11 @@ class TripServiceTest {
 
         @Override
         public List<GroupFootprintDto> readFootprints(Long groupId) {
+            return List.of();
+        }
+
+        @Override
+        public List<GroupMediaDto> readMedia(Long groupId, GroupMediaRequest request) {
             return List.of();
         }
 

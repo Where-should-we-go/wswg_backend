@@ -156,6 +156,111 @@
         ORDER BY visit_count DESC, attraction_count DESC, ctr.sido_code ASC, ctr.gugun_code ASC
     </select>
 
+    <resultMap id="groupMediaResultMap" type="com.ssafy.wswg.model.dto.GroupMediaDto">
+        <id property="tripId" column="trip_id"/>
+        <result property="tripTitle" column="trip_title"/>
+        <result property="visitDate" column="visit_date"/>
+        <result property="blockId" column="block_id"/>
+        <result property="blockTitle" column="block_title"/>
+        <result property="contentId" column="content_id"/>
+        <result property="attractionTitle" column="attraction_title"/>
+        <result property="sidoCode" column="sido_code"/>
+        <result property="sidoName" column="sido_name"/>
+        <result property="gugunCode" column="gugun_code"/>
+        <result property="gugunName" column="gugun_name"/>
+        <result property="latitude" column="latitude"/>
+        <result property="longitude" column="longitude"/>
+        <result property="mediaType" column="media_type"/>
+        <result property="mediaUrl" column="media_url"/>
+        <result property="metadata"
+                column="metadata"
+                typeHandler="com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler"/>
+    </resultMap>
+
+    <select id="readMedia" resultMap="groupMediaResultMap">
+        WITH trip_blocks AS (
+            SELECT
+                t.trip_id,
+                t.title AS trip_title,
+                item,
+                CASE
+                    WHEN COALESCE(item -&gt;&gt; 'content_id', item -&gt;&gt; 'contentId') ~ '^[0-9]+$'
+                        THEN COALESCE(item -&gt;&gt; 'content_id', item -&gt;&gt; 'contentId')::integer
+                    ELSE NULL
+                END AS content_id
+            FROM trips t
+            CROSS JOIN LATERAL jsonb_array_elements(
+                CASE
+                    WHEN jsonb_typeof(t.data -&gt; 'items') = 'array' THEN t.data -&gt; 'items'
+                    ELSE '[]'::jsonb
+                END
+            ) item
+            WHERE t.group_id = #{groupId}
+              AND t.end_date &lt; CURRENT_DATE
+        ),
+        block_media AS (
+            SELECT
+                tb.trip_id,
+                tb.trip_title,
+                tb.item,
+                tb.content_id,
+                media
+            FROM trip_blocks tb
+            CROSS JOIN LATERAL jsonb_array_elements(
+                CASE
+                    WHEN jsonb_typeof(tb.item -&gt; 'media') = 'array' THEN tb.item -&gt; 'media'
+                    ELSE '[]'::jsonb
+                END
+            ) media
+        )
+        SELECT
+            bm.trip_id,
+            bm.trip_title,
+            NULLIF(bm.item -&gt;&gt; 'visitDate', '')::date AS visit_date,
+            bm.item -&gt;&gt; 'id' AS block_id,
+            bm.item -&gt;&gt; 'title' AS block_title,
+            bm.content_id,
+            a.title AS attraction_title,
+            a.sido_code,
+            s.sido_name,
+            a.gugun_code,
+            g.gugun_name,
+            COALESCE(
+                CASE WHEN bm.item -&gt;&gt; 'lat' ~ '^-?[0-9]+(\.[0-9]+)?$' THEN (bm.item -&gt;&gt; 'lat')::double precision END,
+                a.latitude
+            ) AS latitude,
+            COALESCE(
+                CASE WHEN bm.item -&gt;&gt; 'lng' ~ '^-?[0-9]+(\.[0-9]+)?$' THEN (bm.item -&gt;&gt; 'lng')::double precision END,
+                a.longitude
+            ) AS longitude,
+            bm.media -&gt;&gt; 'type' AS media_type,
+            bm.media -&gt;&gt; 'url' AS media_url,
+            COALESCE(bm.media -&gt; 'metadata', '{}'::jsonb) AS metadata
+        FROM block_media bm
+        LEFT JOIN attractions a
+            ON a.content_id = bm.content_id
+        LEFT JOIN sidos s
+            ON s.sido_code = a.sido_code
+        LEFT JOIN guguns g
+            ON g.sido_code = a.sido_code
+           AND g.gugun_code = a.gugun_code
+        WHERE bm.media -&gt;&gt; 'url' IS NOT NULL
+          AND bm.media -&gt;&gt; 'url' &lt;&gt; ''
+        <if test="request.sidoCode != null">
+          AND a.sido_code = #{request.sidoCode}
+        </if>
+        <if test="request.gugunCode != null">
+          AND a.gugun_code = #{request.gugunCode}
+        </if>
+        <if test="request.contentId != null">
+          AND bm.content_id = #{request.contentId}
+        </if>
+        <if test="request.mediaType != null">
+          AND UPPER(bm.media -&gt;&gt; 'type') = #{request.mediaType}
+        </if>
+        ORDER BY bm.trip_id DESC, visit_date ASC NULLS LAST, block_id ASC, media_url ASC
+    </select>
+
     <update id="updateGroupName">
         UPDATE groups
         SET group_name = #{groupName}

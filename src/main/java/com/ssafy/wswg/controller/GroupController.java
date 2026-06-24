@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,8 @@ import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
+import com.ssafy.wswg.model.dto.GroupMediaDto;
+import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
 import com.ssafy.wswg.model.dto.GroupUpdateRequestDto;
@@ -75,6 +78,14 @@ public class GroupController {
             @LoginUserId Long userId,
             @PathVariable Long groupId) {
         return ResponseEntity.ok(groupService.readFootprints(groupId, userId));
+    }
+
+    @GetMapping("/{groupId}/media")
+    public ResponseEntity<List<GroupMediaDto>> readMedia(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId,
+            @ModelAttribute GroupMediaRequest request) {
+        return ResponseEntity.ok(groupService.readMedia(groupId, userId, request));
     }
 
     @PostMapping("/{groupId}/members")
