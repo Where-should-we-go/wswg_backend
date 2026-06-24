@@ -125,6 +125,49 @@ public class PlanStateService {
         return STATE_KEY_FORMAT.formatted(tripId);
     }
 
+    public boolean hasState(Long tripId) {
+        return Boolean.TRUE.equals(stringRedisTemplate.hasKey(stateKey(tripId)));
+    }
+
+    public JsonNode appendBlockMedia(Long tripId, Long userId, String itemId, ObjectNode media) {
+        tripService.readTrip(tripId, userId);
+
+        String lockKey = editLockKey(tripId);
+        acquireEditLock(lockKey);
+
+        try {
+            JsonNode state = loadState(tripId, userId);
+            ObjectNode nextState = normalizeState(state).deepCopy();
+            ObjectNode item = findItemOrNull(ensureItems(nextState), itemId);
+            if (item == null) {
+                throw new CommonException(ErrorCode.NOT_FOUND_TRIP_ITEM);
+            }
+
+            ArrayNode mediaArray = mediaArray(item);
+            mediaArray.add(media.deepCopy());
+
+            ObjectNode patch = objectMapper.createObjectNode();
+            patch.set("media", mediaArray.deepCopy());
+
+            ObjectNode payload = objectMapper.createObjectNode();
+            payload.put("id", itemId);
+            payload.set("patch", patch);
+
+            OffsetDateTime ts = OffsetDateTime.now();
+            JsonNode actor = actor(userId);
+            String seq = appendStream(tripId, TYPE_BLOCK_UPDATE, actor, ts, payload);
+            stringRedisTemplate.opsForSet().add(STREAMS_KEY, String.valueOf(tripId));
+
+            stringRedisTemplate.opsForValue().set(stateKey(tripId), writeJson(nextState));
+            PlanSocketMessage message = message(TYPE_BLOCK_UPDATE, tripId, actor, seq, ts, payload);
+            stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(message));
+
+            return nextState;
+        } finally {
+            stringRedisTemplate.delete(lockKey);
+        }
+    }
+
     public String streamKey(Long tripId) {
         return STREAM_KEY_FORMAT.formatted(tripId);
     }
@@ -266,6 +309,17 @@ public class PlanStateService {
         }
 
         return false;
+    }
+
+    private ArrayNode mediaArray(ObjectNode item) {
+        JsonNode media = item.get("media");
+        if (media instanceof ArrayNode arrayNode) {
+            return arrayNode;
+        }
+
+        ArrayNode arrayNode = objectMapper.createArrayNode();
+        item.set("media", arrayNode);
+        return arrayNode;
     }
 
     private void mergeBlockPatch(ObjectNode item, ObjectNode patch) {

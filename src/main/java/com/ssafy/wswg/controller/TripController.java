@@ -3,6 +3,7 @@ package com.ssafy.wswg.controller;
 import java.net.URI;
 import java.util.List;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,10 +14,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.ssafy.wswg.model.dto.TripCreateRequestDto;
 import com.ssafy.wswg.model.dto.TripDto;
+import com.ssafy.wswg.model.dto.TripMediaUploadResponse;
 import com.ssafy.wswg.model.dto.TripUpdateRequestDto;
+import com.ssafy.wswg.model.service.TripMediaService;
 import com.ssafy.wswg.model.service.TripService;
 import com.ssafy.wswg.security.LoginUserId;
 
@@ -27,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TripController {
     private final TripService tripService;
+    private final TripMediaService tripMediaService;
 
     @PostMapping
     public ResponseEntity<TripDto> createTrip(
@@ -55,6 +60,18 @@ public class TripController {
             @LoginUserId Long userId,
             @PathVariable Long tripId) {
         return ResponseEntity.ok(tripService.readTrip(tripId, userId));
+    }
+
+    @PostMapping(
+            value = "/{tripId}/items/{itemId}/media",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<TripMediaUploadResponse> uploadMedia(
+            @LoginUserId Long userId,
+            @PathVariable Long tripId,
+            @PathVariable String itemId,
+            @RequestParam String mediaType,
+            @RequestParam MultipartFile file) {
+        return ResponseEntity.ok(tripMediaService.uploadMedia(tripId, userId, itemId, mediaType, file));
     }
 
     @PutMapping("/{tripId}")

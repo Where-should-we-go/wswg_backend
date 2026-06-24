@@ -19,7 +19,8 @@ public enum ErrorCode {
     INVALID_TRIP_SCOPE(40007, HttpStatus.BAD_REQUEST, "scope는 mine 또는 joined만 사용할 수 있습니다."),
     INVALID_TRIP_STATUS(40008, HttpStatus.BAD_REQUEST, "status는 UPCOMING, ONGOING, COMPLETED만 사용할 수 있습니다."),
     INVALID_TRIP_REQUEST(40009, HttpStatus.BAD_REQUEST, "여행 계획 요청 값을 확인해 주세요."),
-    INVALID_AI_RECOMMENDATION_REQUEST(40010, HttpStatus.BAD_REQUEST, "AI 여행지 추천 요청 값을 확인해 주세요."),
+    INVALID_MEDIA_UPLOAD_REQUEST(40010, HttpStatus.BAD_REQUEST, "미디어 업로드 요청 값을 확인해 주세요."),
+    INVALID_AI_RECOMMENDATION_REQUEST(40011, HttpStatus.BAD_REQUEST, "AI 여행지 추천 요청 값을 확인해 주세요."),
 
     // 401
     UNAUTHORIZED(40100, HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
@@ -49,7 +50,9 @@ public enum ErrorCode {
     TOUR_LOAD_FAILED(50202, HttpStatus.BAD_GATEWAY, "관광정보 적재에 실패했습니다."),
     EMBEDDING_REQUEST_FAILED(50203, HttpStatus.BAD_GATEWAY, "임베딩 생성에 실패했습니다."),
     TOUR_API_DETAIL_FAILED(50204, HttpStatus.BAD_GATEWAY, "관광지 상세 정보를 불러오지 못했습니다."),
-    AI_TRIP_CANDIDATE_FAILED(50205, HttpStatus.BAD_GATEWAY, "AI 여행 후보 생성에 실패했습니다.");
+    OBJECT_STORAGE_CONFIG_INVALID(50205, HttpStatus.BAD_GATEWAY, "Object Storage 설정을 확인해 주세요."),
+    OBJECT_STORAGE_UPLOAD_FAILED(50206, HttpStatus.BAD_GATEWAY, "미디어 파일 저장에 실패했습니다."),
+    AI_TRIP_CANDIDATE_FAILED(50207, HttpStatus.BAD_GATEWAY, "AI 여행 후보 생성에 실패했습니다.");
 
     private final Integer code;
     private final HttpStatus httpStatus;
