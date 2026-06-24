@@ -33,9 +33,11 @@ public enum ErrorCode {
     NOT_FOUND_USER(40401, HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
     NOT_FOUND_ATTRACTION(40402, HttpStatus.NOT_FOUND, "존재하지 않는 관광지입니다."),
     NOT_FOUND_TRIP(40403, HttpStatus.NOT_FOUND, "존재하지 않는 여행 계획입니다."),
+    NOT_FOUND_TRIP_ITEM(40404, HttpStatus.NOT_FOUND, "존재하지 않는 여행 일정 항목입니다."),
 
     // 409
     TOUR_LOAD_ALREADY_RUNNING(40900, HttpStatus.CONFLICT, "관광정보 적재가 이미 진행 중입니다."),
+    PLAN_EDIT_BUSY(40901, HttpStatus.CONFLICT, "여행 계획 편집 처리 중입니다. 잠시 후 다시 시도해 주세요."),
 
     // 500
     INTERNAL_SERVER_ERROR(50000, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),

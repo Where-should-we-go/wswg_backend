@@ -162,6 +162,12 @@
         WHERE trip_id = #{tripId}
     </update>
 
+    <update id="updateTripData">
+        UPDATE trips
+        SET data = #{data,typeHandler=com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler}::jsonb
+        WHERE trip_id = #{tripId}
+    </update>
+
     <delete id="deleteTrip">
         DELETE FROM trips
         WHERE trip_id = #{tripId}

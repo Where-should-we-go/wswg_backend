@@ -211,6 +211,17 @@ class TripServiceTest {
         }
 
         @Override
+        public int updateTripData(Long tripId, com.fasterxml.jackson.databind.JsonNode data) {
+            TripDto existing = saved.get(tripId);
+            if (existing == null) {
+                return 0;
+            }
+
+            existing.setData(data);
+            return 1;
+        }
+
+        @Override
         public int deleteTrip(Long tripId) {
             return saved.remove(tripId) == null ? 0 : 1;
         }
