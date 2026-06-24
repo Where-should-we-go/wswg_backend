@@ -116,6 +116,28 @@ class PlanStateServiceTest {
         assertThat(redisTemplate.streams).doesNotContainKey("plan:10:stream");
     }
 
+    @Test
+    void appendBlockMedia_updatesRedisStateAndPublishesBlockUpdate() throws Exception {
+        redisTemplate.values.put("plan:10:state", "{\"items\":[{\"id\":\"item-1\",\"title\":\"경복궁\"}]}");
+
+        ObjectNode media = objectMapper.createObjectNode();
+        media.put("id", "media-1");
+        media.put("type", "PHOTO");
+        media.put("url", "https://cdn.example.com/photo.jpg");
+
+        JsonNode nextState = planStateService.appendBlockMedia(TRIP_ID, USER_ID, "item-1", media);
+
+        JsonNode item = nextState.get("items").get(0);
+        assertThat(item.get("media").get(0).get("url").asText()).isEqualTo("https://cdn.example.com/photo.jpg");
+        assertThat(objectMapper.readTree(redisTemplate.values.get("plan:10:state"))
+                .get("items").get(0).get("media").get(0).get("type").asText()).isEqualTo("PHOTO");
+        assertThat(redisTemplate.streams).containsKey("plan:10:stream");
+        assertThat(redisTemplate.sets.get("plan:streams")).contains("10");
+        assertThat(redisTemplate.publishedChannel).isEqualTo("plan:10:edit");
+        assertThat(redisTemplate.publishedMessage).contains("\"type\":\"block.update\"");
+        assertThat(redisTemplate.publishedMessage).contains("\"media\"");
+    }
+
     private static class FakeTripService extends TripService {
         private final TripDto trip = new TripDto();
 
