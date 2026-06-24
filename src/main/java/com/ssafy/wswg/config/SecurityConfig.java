@@ -34,7 +34,8 @@ public class SecurityConfig {
                         "/login/oauth2/**",
                         "/auth/refresh",
                         "/swagger-ui/**",
-                        "/v3/api-docs/**").permitAll()
+                        "/v3/api-docs/**",
+                        "/ws/plans/**").permitAll()
                 .requestMatchers("/admin").hasRole("ADMIN")
                 .anyRequest().authenticated())
 

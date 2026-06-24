@@ -5,6 +5,7 @@ import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.ssafy.wswg.model.dto.MyPageTripResponse;
 import com.ssafy.wswg.model.dto.TripDto;
 
@@ -23,6 +24,8 @@ public interface TripDao {
     List<TripDto> readTripsByGroupId(@Param("groupId") Long groupId);
 
     int updateTrip(TripDto trip);
+
+    int updateTripData(@Param("tripId") Long tripId, @Param("data") JsonNode data);
 
     int deleteTrip(Long tripId);
 }
