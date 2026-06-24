@@ -115,6 +115,84 @@ Redis에서 후보 세션 조회
 }
 ```
 
+### 3. 추천 기반 여행 계획 생성
+
+```http
+POST /api/ai/trip-plans
+```
+
+요청:
+
+```json
+{
+  "title": "부모님과 전주 1박2일",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-02",
+  "groupId": 10,
+  "sessionId": "uuid",
+  "selectedCandidateIds": ["c1", "c2"],
+  "latitude": 37.5665,
+  "longitude": 126.9780,
+  "radiusMeters": 50000,
+  "limit": 6
+}
+```
+
+처리:
+
+```text
+추천 API와 동일한 방식으로 실제 관광지 추천 계산
+→ 추천 결과를 trips.data.items 배열로 변환
+→ 기존 TripService.createTrip으로 개인/그룹 여행 생성
+→ 생성된 TripDto 반환
+```
+
+응답:
+
+```json
+{
+  "tripId": 42,
+  "title": "부모님과 전주 1박2일",
+  "startDate": "2026-07-01",
+  "endDate": "2026-07-02",
+  "groupId": 10,
+  "data": {
+    "items": [
+      {
+        "id": "ai-place-1",
+        "content_id": 126508,
+        "contentId": 126508,
+        "title": "전주 한옥마을",
+        "contentTypeId": 12,
+        "sidoCode": 35,
+        "sidoName": "전북",
+        "gugunCode": 35010,
+        "gugunName": "전주시",
+        "lat": 35.814,
+        "lng": 127.153,
+        "visitDate": "2026-07-01",
+        "order": 1,
+        "media": [],
+        "properties": {
+          "source": "AI_RECOMMENDATION",
+          "score": 0.83,
+          "similarity": 0.91,
+          "matchedCandidateId": "c1",
+          "matchedCandidateName": "전주 한옥마을"
+        }
+      }
+    ],
+    "aiRecommendation": {
+      "sessionId": "uuid",
+      "selectedCandidateIds": ["c1", "c2"],
+      "createdAt": "2026-06-24T16:20:00+09:00"
+    }
+  }
+}
+```
+
+`groupId`가 있으면 기존 여행 생성 규칙과 동일하게 그룹장만 생성할 수 있다. `groupId`가 없으면 로그인 사용자의 개인 여행으로 생성한다. `title`이 비어 있으면 기본값 `AI 추천 여행 계획`을 사용한다.
+
 ## 랭킹 기준
 
 위치가 있을 때:
@@ -165,5 +243,6 @@ TTL:
 
 - AI 후보는 실제 DB 관광지가 아닐 수 있다.
 - 최종 추천은 반드시 `attractions`와 `attraction_embeddings`에 존재하는 관광지만 반환한다.
+- 여행 계획 생성은 프론트가 내려준 장소를 그대로 믿지 않고, 선택 후보 기준으로 백엔드가 추천을 다시 계산한 결과만 `trips.data.items`에 저장한다.
 - 후보 하나당 embedding을 만들고 top K를 조회한 뒤 합치면, 여러 취향을 선택했을 때 다양성이 더 좋다.
 - AI 후보 JSON은 파싱 실패 가능성이 있으므로 응답 스키마를 엄격히 요구하고, 파싱 실패 시 서버 오류로 처리한다.
