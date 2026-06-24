@@ -44,7 +44,7 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
         session.getAttributes().put(USER_ID_ATTRIBUTE, userId);
         sessionRegistry.add(tripId, session);
 
-        send(session, new PlanSocketMessage("STATE_SYNC", tripId, null, state));
+        send(session, planStateService.syncMessage(tripId, state));
     }
 
     @Override
@@ -53,9 +53,7 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
         Long userId = getRequiredAttribute(session, USER_ID_ATTRIBUTE);
         PlanEditEvent event = objectMapper.readValue(message.getPayload(), PlanEditEvent.class);
 
-        PlanEditEvent appliedEvent = planStateService.applyEdit(tripId, userId, event);
-        send(session, new PlanSocketMessage("EDIT_ACK", tripId, appliedEvent.getSeq(),
-                objectMapper.valueToTree(appliedEvent)));
+        send(session, planStateService.applyEdit(tripId, userId, event));
     }
 
     @Override
@@ -63,6 +61,7 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
         Object tripId = session.getAttributes().get(TRIP_ID_ATTRIBUTE);
         if (tripId instanceof Long id) {
             sessionRegistry.remove(id, session);
+            clearPresence(session, id);
         }
     }
 
@@ -71,6 +70,7 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
         Object tripId = session.getAttributes().get(TRIP_ID_ATTRIBUTE);
         if (tripId instanceof Long id) {
             sessionRegistry.remove(id, session);
+            clearPresence(session, id);
         }
     }
 
@@ -122,5 +122,12 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
 
     private void send(WebSocketSession session, PlanSocketMessage message) throws IOException {
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
+    }
+
+    private void clearPresence(WebSocketSession session, Long tripId) {
+        Object userId = session.getAttributes().get(USER_ID_ATTRIBUTE);
+        if (userId instanceof Long id) {
+            planStateService.clearPresence(tripId, id);
+        }
     }
 }

@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Duration;
 import java.util.List;
 
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.RecordId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -27,44 +29,42 @@ class PlanStateFlushWorkerTest {
     }
 
     @Test
-    void flushDuePlansKeepsDirtyMarkerWhenScoreChangedDuringSave() {
+    void flushDuePlansSkipsWhenStreamHasNoNewRecordAfterLastFlushedId() {
         redisTemplate.values.put("plan:10:state", "{\"items\":[]}");
-        redisTemplate.zSets.computeIfAbsent("plan:dirty", ignored -> new java.util.concurrent.ConcurrentHashMap<>())
-                .put("10", 1D);
+        redisTemplate.sets.computeIfAbsent("plan:streams", ignored -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                .add("10");
+        redisTemplate.values.put("plan:10:lastFlushedId", "1-0");
 
-        RecordingTripDao tripDao = new RecordingTripDao(redisTemplate, true);
+        RecordingTripDao tripDao = new RecordingTripDao();
         PlanStateFlushWorker flushWorker = new PlanStateFlushWorker(redisTemplate, planStateService, tripDao);
 
         flushWorker.flushDuePlans();
 
-        assertThat(tripDao.updatedTripId).isEqualTo(10L);
-        assertThat(redisTemplate.zSets.get("plan:dirty")).containsKey("10");
+        assertThat(tripDao.updatedTripId).isNull();
         assertThat(redisTemplate.deletedKeys).contains("plan:10:flushLock");
     }
 
     @Test
-    void flushDuePlansRemovesDirtyMarkerAfterSuccessfulSaveWhenScoreIsUnchanged() {
+    void flushDuePlansReadsStreamAndStoresLastFlushedIdAfterSavingState() {
         redisTemplate.values.put("plan:10:state", "{\"items\":[]}");
-        redisTemplate.zSets.computeIfAbsent("plan:dirty", ignored -> new java.util.concurrent.ConcurrentHashMap<>())
-                .put("10", 1D);
+        redisTemplate.sets.computeIfAbsent("plan:streams", ignored -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                .add("10");
+        redisTemplate.streams.computeIfAbsent("plan:10:stream", ignored -> new java.util.ArrayList<>())
+                .add(MapRecord.create("plan:10:stream", java.util.Map.<Object, Object>of("type", "block.update"))
+                        .withId(RecordId.of("1-0")));
 
-        RecordingTripDao tripDao = new RecordingTripDao(redisTemplate, false);
+        RecordingTripDao tripDao = new RecordingTripDao();
         PlanStateFlushWorker flushWorker = new PlanStateFlushWorker(redisTemplate, planStateService, tripDao);
 
         flushWorker.flushDuePlans();
 
         assertThat(tripDao.updatedTripId).isEqualTo(10L);
-        assertThat(redisTemplate.zSets.get("plan:dirty")).doesNotContainKey("10");
+        assertThat(redisTemplate.values.get("plan:10:lastFlushedId")).isEqualTo("1-0");
     }
 
     private static class FakePlanStateService extends PlanStateService {
         FakePlanStateService(FakeStringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
             super(redisTemplate, objectMapper, null);
-        }
-
-        @Override
-        public String dirtyZSetKey() {
-            return "plan:dirty";
         }
 
         @Override
@@ -76,24 +76,29 @@ class PlanStateFlushWorkerTest {
         public String stateKey(Long tripId) {
             return "plan:%d:state".formatted(tripId);
         }
+
+        @Override
+        public String streamKey(Long tripId) {
+            return "plan:%d:stream".formatted(tripId);
+        }
+
+        @Override
+        public String streamsKey() {
+            return "plan:streams";
+        }
+
+        @Override
+        public String lastFlushedIdKey(Long tripId) {
+            return "plan:%d:lastFlushedId".formatted(tripId);
+        }
     }
 
     private static class RecordingTripDao implements TripDao {
-        private final FakeStringRedisTemplate redisTemplate;
-        private final boolean changeScoreDuringSave;
         private Long updatedTripId;
-
-        RecordingTripDao(FakeStringRedisTemplate redisTemplate, boolean changeScoreDuringSave) {
-            this.redisTemplate = redisTemplate;
-            this.changeScoreDuringSave = changeScoreDuringSave;
-        }
 
         @Override
         public int updateTripData(Long tripId, JsonNode data) {
             updatedTripId = tripId;
-            if (changeScoreDuringSave) {
-                redisTemplate.zSets.get("plan:dirty").put(String.valueOf(tripId), System.currentTimeMillis() + 5_000D);
-            }
             return 1;
         }
 

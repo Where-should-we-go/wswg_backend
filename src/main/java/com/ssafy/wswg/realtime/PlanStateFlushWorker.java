@@ -1,9 +1,12 @@
 package com.ssafy.wswg.realtime;
 
-import java.util.Objects;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.data.domain.Range;
+import org.springframework.data.redis.connection.Limit;
+import org.springframework.data.redis.connection.stream.MapRecord;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -15,6 +18,7 @@ import com.ssafy.wswg.model.dao.TripDao;
 public class PlanStateFlushWorker {
     private static final int FLUSH_BATCH_SIZE = 100;
     private static final String LOCK_KEY_FORMAT = "plan:%s:flushLock";
+    private static final String INITIAL_STREAM_ID = "0-0";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final PlanStateService planStateService;
@@ -30,22 +34,19 @@ public class PlanStateFlushWorker {
         this.tripDao = tripDao;
     }
 
-    @Scheduled(fixedDelay = 1_000L)
+    @Scheduled(fixedDelay = 10_000L)
     public void flushDuePlans() {
-        long now = System.currentTimeMillis();
-        Set<String> dueTripIds = stringRedisTemplate.opsForZSet()
-                .rangeByScore(planStateService.dirtyZSetKey(), 0, now, 0, FLUSH_BATCH_SIZE);
-
-        if (dueTripIds == null || dueTripIds.isEmpty()) {
+        Set<String> tripIds = stringRedisTemplate.opsForSet().members(planStateService.streamsKey());
+        if (tripIds == null || tripIds.isEmpty()) {
             return;
         }
 
-        for (String tripId : dueTripIds) {
-            flushTrip(tripId, now);
+        for (String tripId : tripIds) {
+            flushTrip(tripId);
         }
     }
 
-    private void flushTrip(String tripId, long now) {
+    private void flushTrip(String tripId) {
         String lockKey = LOCK_KEY_FORMAT.formatted(tripId);
         Boolean locked = stringRedisTemplate.opsForValue()
                 .setIfAbsent(lockKey, workerId, planStateService.flushLockTtl());
@@ -53,31 +54,33 @@ public class PlanStateFlushWorker {
             return;
         }
 
-        Double observedScore = stringRedisTemplate.opsForZSet().score(planStateService.dirtyZSetKey(), tripId);
-        if (observedScore == null || observedScore > now) {
-            stringRedisTemplate.delete(lockKey);
-            return;
-        }
-
         try {
+            Long tripIdValue = Long.valueOf(tripId);
+            String lastFlushedIdKey = planStateService.lastFlushedIdKey(tripIdValue);
+            String lastFlushedId = stringRedisTemplate.opsForValue().get(lastFlushedIdKey);
+            if (lastFlushedId == null || lastFlushedId.isBlank()) {
+                lastFlushedId = INITIAL_STREAM_ID;
+            }
+
+            List<MapRecord<String, Object, Object>> records = stringRedisTemplate.opsForStream()
+                    .range(planStateService.streamKey(tripIdValue),
+                            Range.leftOpen(lastFlushedId, "+"),
+                            Limit.limit().count(FLUSH_BATCH_SIZE));
+            if (records == null || records.isEmpty()) {
+                return;
+            }
+
             String stateJson = stringRedisTemplate.opsForValue().get(planStateService.stateKey(Long.valueOf(tripId)));
             if (stateJson == null) {
-                removeDirtyIfUnchanged(tripId, observedScore);
                 return;
             }
 
             JsonNode state = planStateService.readJson(stateJson);
-            tripDao.updateTripData(Long.valueOf(tripId), state);
-            removeDirtyIfUnchanged(tripId, observedScore);
+            tripDao.updateTripData(tripIdValue, state);
+            String flushedId = records.get(records.size() - 1).getId().getValue();
+            stringRedisTemplate.opsForValue().set(lastFlushedIdKey, flushedId);
         } finally {
             stringRedisTemplate.delete(lockKey);
-        }
-    }
-
-    private void removeDirtyIfUnchanged(String tripId, Double observedScore) {
-        Double currentScore = stringRedisTemplate.opsForZSet().score(planStateService.dirtyZSetKey(), tripId);
-        if (Objects.equals(observedScore, currentScore)) {
-            stringRedisTemplate.opsForZSet().remove(planStateService.dirtyZSetKey(), tripId);
         }
     }
 }

@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.ssafy.wswg.model.dto.PlanEditEvent;
-import com.ssafy.wswg.model.dto.PlanEditType;
+import com.ssafy.wswg.model.dto.PlanSocketMessage;
 import com.ssafy.wswg.model.dto.TripDto;
 import com.ssafy.wswg.model.service.TripService;
 
@@ -43,32 +43,77 @@ class PlanStateServiceTest {
     }
 
     @Test
-    void applyEdit_updatesRedisStatePublishesEventAndSchedulesFlush() throws Exception {
+    void applyEdit_appendsStreamUpdatesRedisStateAndPublishesBlockEvent() throws Exception {
         redisTemplate.values.put("plan:10:state", "{\"items\":[{\"id\":\"item-1\",\"title\":\"이전 제목\",\"order\":1}]}");
-        redisTemplate.sequences.put("plan:10:seq", 2L);
 
         ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "item-1");
         payload.set("patch", objectMapper.createObjectNode().put("title", "새 제목"));
 
         PlanEditEvent event = new PlanEditEvent();
-        event.setType(PlanEditType.EDIT_UPDATE);
-        event.setItemId("item-1");
+        event.setType("block.update");
         event.setPayload(payload);
 
-        PlanEditEvent appliedEvent = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+        PlanSocketMessage ack = planStateService.applyEdit(TRIP_ID, USER_ID, event);
 
-        assertThat(appliedEvent.getTripId()).isEqualTo(TRIP_ID);
-        assertThat(appliedEvent.getActorId()).isEqualTo(USER_ID);
-        assertThat(appliedEvent.getSeq()).isEqualTo(3L);
-        assertThat(appliedEvent.getEventId()).isNotBlank();
-        assertThat(appliedEvent.getCreatedAt()).isNotNull();
+        assertThat(ack.getType()).isEqualTo("ack");
+        assertThat(ack.getTripId()).isEqualTo(TRIP_ID);
+        assertThat(ack.getSeq()).isNotBlank();
 
         JsonNode nextState = objectMapper.readTree(redisTemplate.values.get("plan:10:state"));
         assertThat(nextState.get("items").get(0).get("title").asText()).isEqualTo("새 제목");
-        assertThat(redisTemplate.zSets.get("plan:dirty").get("10")).isGreaterThan(System.currentTimeMillis());
+        assertThat(redisTemplate.streams).containsKey("plan:10:stream");
+        assertThat(redisTemplate.sets.get("plan:streams")).contains("10");
         assertThat(redisTemplate.publishedChannel).isEqualTo("plan:10:edit");
-        assertThat(redisTemplate.publishedMessage).contains("\"type\":\"EDIT\"");
+        assertThat(redisTemplate.publishedMessage).contains("\"type\":\"block.update\"");
+        assertThat(redisTemplate.publishedMessage).contains("\"userId\":7");
         assertThat(redisTemplate.deletedKeys).contains("plan:10:editLock");
+    }
+
+    @Test
+    void applyEdit_mergesPropertiesOneLevelDeeper() throws Exception {
+        redisTemplate.values.put("plan:10:state",
+                "{\"items\":[{\"id\":\"item-1\",\"properties\":{\"memo\":\"기존\",\"budget\":1000}}]}");
+
+        ObjectNode properties = objectMapper.createObjectNode();
+        properties.put("memo", "수정");
+        properties.putNull("budget");
+
+        ObjectNode patch = objectMapper.createObjectNode();
+        patch.set("properties", properties);
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "item-1");
+        payload.set("patch", patch);
+
+        PlanEditEvent event = new PlanEditEvent();
+        event.setType("block.update");
+        event.setPayload(payload);
+
+        planStateService.applyEdit(TRIP_ID, USER_ID, event);
+
+        JsonNode item = objectMapper.readTree(redisTemplate.values.get("plan:10:state")).get("items").get(0);
+        assertThat(item.get("properties").get("memo").asText()).isEqualTo("수정");
+        assertThat(item.get("properties").has("budget")).isFalse();
+    }
+
+    @Test
+    void applyEdit_returnsStaleErrorWhenBlockIsMissing() throws Exception {
+        redisTemplate.values.put("plan:10:state", "{\"items\":[]}");
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "missing");
+        payload.set("patch", objectMapper.createObjectNode().put("title", "새 제목"));
+
+        PlanEditEvent event = new PlanEditEvent();
+        event.setType("block.update");
+        event.setPayload(payload);
+
+        PlanSocketMessage error = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+
+        assertThat(error.getType()).isEqualTo("error");
+        assertThat(error.getPayload().get("code").asText()).isEqualTo("STALE");
+        assertThat(redisTemplate.streams).doesNotContainKey("plan:10:stream");
     }
 
     private static class FakeTripService extends TripService {

@@ -1,8 +1,15 @@
 package com.ssafy.wswg.realtime;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
+import org.springframework.data.domain.Range;
+import org.springframework.data.redis.connection.Limit;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.RecordId;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -14,7 +21,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ssafy.wswg.exception.CommonException;
 import com.ssafy.wswg.exception.ErrorCode;
 import com.ssafy.wswg.model.dto.PlanEditEvent;
-import com.ssafy.wswg.model.dto.PlanEditType;
 import com.ssafy.wswg.model.dto.PlanSocketMessage;
 import com.ssafy.wswg.model.dto.TripDto;
 import com.ssafy.wswg.model.service.TripService;
@@ -26,11 +32,19 @@ import lombok.RequiredArgsConstructor;
 public class PlanStateService {
     private static final String STATE_KEY_FORMAT = "plan:%d:state";
     private static final String EDIT_CHANNEL_FORMAT = "plan:%d:edit";
-    private static final String SEQ_KEY_FORMAT = "plan:%d:seq";
+    private static final String STREAM_KEY_FORMAT = "plan:%d:stream";
+    private static final String LAST_FLUSHED_ID_KEY_FORMAT = "plan:%d:lastFlushedId";
+    private static final String PRESENCE_KEY_FORMAT = "plan:%d:presence";
     private static final String EDIT_LOCK_KEY_FORMAT = "plan:%d:editLock";
-    private static final String DIRTY_ZSET_KEY = "plan:dirty";
-    private static final long DEBOUNCE_MILLIS = 5_000L;
+    private static final String STREAMS_KEY = "plan:streams";
+    private static final String INITIAL_STREAM_ID = "0-0";
     private static final Duration EDIT_LOCK_TTL = Duration.ofSeconds(3);
+    private static final Duration PRESENCE_TTL = Duration.ofSeconds(30);
+    private static final String TYPE_BLOCK_ADD = "block.add";
+    private static final String TYPE_BLOCK_UPDATE = "block.update";
+    private static final String TYPE_BLOCK_REMOVE = "block.remove";
+    private static final String TYPE_META_UPDATE = "meta.update";
+    private static final String TYPE_PRESENCE = "presence";
 
     private final StringRedisTemplate stringRedisTemplate;
     private final ObjectMapper objectMapper;
@@ -50,48 +64,77 @@ public class PlanStateService {
         return state;
     }
 
-    public PlanEditEvent applyEdit(Long tripId, Long userId, PlanEditEvent event) {
+    public PlanSocketMessage syncMessage(Long tripId, JsonNode data) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.set("data", data);
+        payload.set("presence", presenceSnapshot(tripId));
+        payload.put("lastSeq", lastSeq(tripId));
+        return message("sync", tripId, null, null, payload);
+    }
+
+    public PlanSocketMessage applyEdit(Long tripId, Long userId, PlanEditEvent event) {
         tripService.readTrip(tripId, userId);
 
         String lockKey = editLockKey(tripId);
         acquireEditLock(lockKey);
 
         try {
-            Long seq = stringRedisTemplate.opsForValue().increment(seqKey(tripId));
-            event.prepare(tripId, userId, seq == null ? 1L : seq);
-
-            if (event.getType() == null) {
+            String type = event.getType();
+            if (type == null || type.isBlank()) {
                 throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+            }
+
+            if (TYPE_PRESENCE.equals(type)) {
+                PlanSocketMessage presenceMessage = applyPresence(tripId, userId, event);
+                stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(presenceMessage));
+                return ack(tripId, null);
             }
 
             JsonNode state = loadState(tripId, userId);
             JsonNode nextState = mutateState(state, event);
+            if (nextState == null) {
+                return error(tripId, "STALE", "대상 블록이 이미 삭제되었거나 존재하지 않습니다.");
+            }
+
+            OffsetDateTime ts = OffsetDateTime.now();
+            JsonNode actor = actor(userId);
+            String seq = appendStream(tripId, type, actor, ts, event.getPayload());
+            stringRedisTemplate.opsForSet().add(STREAMS_KEY, String.valueOf(tripId));
+
             stringRedisTemplate.opsForValue().set(stateKey(tripId), writeJson(nextState));
-            scheduleFlush(tripId);
-            PlanSocketMessage message = new PlanSocketMessage(
-                    "EDIT",
-                    tripId,
-                    event.getSeq(),
-                    objectMapper.valueToTree(event));
+            PlanSocketMessage message = message(type, tripId, actor, seq, ts, event.getPayload());
             stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(message));
 
-            return event;
+            return ack(tripId, seq);
         } finally {
             stringRedisTemplate.delete(lockKey);
         }
+    }
+
+    public void clearPresence(Long tripId, Long userId) {
+        String presenceKey = PRESENCE_KEY_FORMAT.formatted(tripId);
+        stringRedisTemplate.opsForHash().delete(presenceKey, String.valueOf(userId));
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.putNull("blockId");
+        PlanSocketMessage message = message(TYPE_PRESENCE, tripId, actor(userId), null, OffsetDateTime.now(), payload);
+        stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(message));
     }
 
     public String stateKey(Long tripId) {
         return STATE_KEY_FORMAT.formatted(tripId);
     }
 
-    public String dirtyZSetKey() {
-        return DIRTY_ZSET_KEY;
+    public String streamKey(Long tripId) {
+        return STREAM_KEY_FORMAT.formatted(tripId);
     }
 
-    public void scheduleFlush(Long tripId) {
-        long flushAt = System.currentTimeMillis() + DEBOUNCE_MILLIS;
-        stringRedisTemplate.opsForZSet().add(DIRTY_ZSET_KEY, String.valueOf(tripId), flushAt);
+    public String streamsKey() {
+        return STREAMS_KEY;
+    }
+
+    public String lastFlushedIdKey(Long tripId) {
+        return LAST_FLUSHED_ID_KEY_FORMAT.formatted(tripId);
     }
 
     public Duration flushLockTtl() {
@@ -117,11 +160,11 @@ public class PlanStateService {
     private JsonNode mutateState(JsonNode state, PlanEditEvent event) {
         ObjectNode nextState = normalizeState(state).deepCopy();
         ArrayNode items = ensureItems(nextState);
-        PlanEditType type = event.getType();
+        String type = event.getType();
 
-        if (type == PlanEditType.EDIT_ADD) {
-            JsonNode item = event.getPayload() != null && event.getPayload().has("item")
-                    ? event.getPayload().get("item")
+        if (TYPE_BLOCK_ADD.equals(type)) {
+            JsonNode item = event.getPayload() != null && event.getPayload().has("block")
+                    ? event.getPayload().get("block")
                     : event.getPayload();
             if (item == null || !item.isObject()) {
                 throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
@@ -130,29 +173,38 @@ public class PlanStateService {
             return nextState;
         }
 
-        if (type == PlanEditType.EDIT_UPDATE) {
-            ObjectNode item = findItem(items, event.getItemId());
+        if (TYPE_BLOCK_UPDATE.equals(type)) {
+            String itemId = payloadText(event.getPayload(), "id");
+            ObjectNode item = findItemOrNull(items, itemId);
+            if (item == null) {
+                return null;
+            }
             JsonNode patch = event.getPayload() != null && event.getPayload().has("patch")
                     ? event.getPayload().get("patch")
-                    : event.getPayload();
+                    : null;
             if (patch == null || !patch.isObject()) {
                 throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
             }
-            patch.fields().forEachRemaining(entry -> item.set(entry.getKey(), entry.getValue()));
+            mergeBlockPatch(item, (ObjectNode) patch);
             return nextState;
         }
 
-        if (type == PlanEditType.EDIT_DELETE) {
-            removeItem(items, event.getItemId());
+        if (TYPE_BLOCK_REMOVE.equals(type)) {
+            String itemId = payloadText(event.getPayload(), "id");
+            return removeItem(items, itemId) ? nextState : null;
+        }
+
+        if (TYPE_META_UPDATE.equals(type)) {
+            JsonNode patch = event.getPayload() == null ? null : event.getPayload().get("patch");
+            if (patch == null || !patch.isObject()) {
+                throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+            }
+            ObjectNode meta = ensureObject(nextState, "meta");
+            patch.fields().forEachRemaining(entry -> meta.set(entry.getKey(), entry.getValue()));
             return nextState;
         }
 
-        if (type == PlanEditType.EDIT_REORDER) {
-            reorderItems(items, event.getPayload());
-            return nextState;
-        }
-
-        return nextState;
+        throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
     }
 
     private ObjectNode normalizeState(JsonNode data) {
@@ -174,7 +226,18 @@ public class PlanStateService {
         return arrayNode;
     }
 
-    private ObjectNode findItem(ArrayNode items, String itemId) {
+    private ObjectNode ensureObject(ObjectNode state, String fieldName) {
+        JsonNode value = state.get(fieldName);
+        if (value instanceof ObjectNode objectNode) {
+            return objectNode;
+        }
+
+        ObjectNode objectNode = objectMapper.createObjectNode();
+        state.set(fieldName, objectNode);
+        return objectNode;
+    }
+
+    private ObjectNode findItemOrNull(ArrayNode items, String itemId) {
         if (itemId == null || itemId.isBlank()) {
             throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
         }
@@ -185,36 +248,144 @@ public class PlanStateService {
             }
         }
 
-        throw new CommonException(ErrorCode.NOT_FOUND_TRIP_ITEM);
+        return null;
     }
 
-    private void removeItem(ArrayNode items, String itemId) {
-        Iterator<JsonNode> iterator = items.iterator();
-        while (iterator.hasNext()) {
-            JsonNode item = iterator.next();
-            if (itemId != null && itemId.equals(item.path("id").asText(null))) {
-                iterator.remove();
-                return;
-            }
-        }
-
-        throw new CommonException(ErrorCode.NOT_FOUND_TRIP_ITEM);
-    }
-
-    private void reorderItems(ArrayNode items, JsonNode payload) {
-        JsonNode orderedIds = payload == null ? null : payload.get("orderedItemIds");
-        if (orderedIds == null || !orderedIds.isArray()) {
+    private boolean removeItem(ArrayNode items, String itemId) {
+        if (itemId == null || itemId.isBlank()) {
             throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
         }
 
-        int order = 1;
-        for (JsonNode orderedId : orderedIds) {
-            ObjectNode item = findItem(items, orderedId.asText());
-            item.put("order", order++);
-            if (payload.hasNonNull("visitDate")) {
-                item.put("visitDate", payload.get("visitDate").asText());
+        Iterator<JsonNode> iterator = items.iterator();
+        while (iterator.hasNext()) {
+            JsonNode item = iterator.next();
+            if (itemId.equals(item.path("id").asText(null))) {
+                iterator.remove();
+                return true;
             }
         }
+
+        return false;
+    }
+
+    private void mergeBlockPatch(ObjectNode item, ObjectNode patch) {
+        patch.fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            JsonNode value = entry.getValue();
+            if ("properties".equals(key)) {
+                mergeProperties(item, value);
+                return;
+            }
+
+            item.set(key, value);
+        });
+    }
+
+    private void mergeProperties(ObjectNode item, JsonNode value) {
+        if (value == null || value.isNull()) {
+            item.set("properties", objectMapper.createObjectNode());
+            return;
+        }
+
+        if (!value.isObject()) {
+            throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+        }
+
+        ObjectNode properties = ensureObject(item, "properties");
+        value.fields().forEachRemaining(entry -> {
+            JsonNode propertyValue = entry.getValue();
+            if (propertyValue == null || propertyValue.isNull()
+                    || (propertyValue.isTextual() && propertyValue.asText().isBlank())) {
+                properties.remove(entry.getKey());
+                return;
+            }
+            properties.set(entry.getKey(), propertyValue);
+        });
+    }
+
+    private String appendStream(Long tripId, String type, JsonNode actor, OffsetDateTime ts, JsonNode payload) {
+        Map<String, String> value = Map.of(
+                "type", type,
+                "actor", writeJson(actor),
+                "ts", ts.toString(),
+                "payload", writeJson(payload == null ? objectMapper.createObjectNode() : payload));
+        RecordId recordId = stringRedisTemplate.opsForStream().add(streamKey(tripId), value);
+        if (recordId == null) {
+            throw new CommonException(ErrorCode.PLAN_EDIT_BUSY);
+        }
+        return recordId.getValue();
+    }
+
+    private PlanSocketMessage applyPresence(Long tripId, Long userId, PlanEditEvent event) {
+        String blockId = payloadText(event.getPayload(), "blockId");
+        if (blockId == null || blockId.isBlank()) {
+            stringRedisTemplate.opsForHash().delete(PRESENCE_KEY_FORMAT.formatted(tripId), String.valueOf(userId));
+        } else {
+            String presenceKey = PRESENCE_KEY_FORMAT.formatted(tripId);
+            stringRedisTemplate.opsForHash().put(presenceKey, String.valueOf(userId), blockId);
+            stringRedisTemplate.expire(presenceKey, PRESENCE_TTL);
+        }
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        if (blockId == null) {
+            payload.putNull("blockId");
+        } else {
+            payload.put("blockId", blockId);
+        }
+        return message(TYPE_PRESENCE, tripId, actor(userId), null, OffsetDateTime.now(), payload);
+    }
+
+    private ArrayNode presenceSnapshot(Long tripId) {
+        ArrayNode presence = objectMapper.createArrayNode();
+        Map<Object, Object> entries = stringRedisTemplate.opsForHash().entries(PRESENCE_KEY_FORMAT.formatted(tripId));
+        entries.forEach((memberId, blockId) -> {
+            ObjectNode entry = objectMapper.createObjectNode();
+            entry.put("memberId", String.valueOf(memberId));
+            entry.put("blockId", String.valueOf(blockId));
+            presence.add(entry);
+        });
+        return presence;
+    }
+
+    private String lastSeq(Long tripId) {
+        List<MapRecord<String, Object, Object>> records = stringRedisTemplate.opsForStream()
+                .reverseRange(streamKey(tripId), Range.unbounded(), Limit.limit().count(1));
+        if (records == null || records.isEmpty()) {
+            return INITIAL_STREAM_ID;
+        }
+        return records.get(0).getId().getValue();
+    }
+
+    private JsonNode actor(Long userId) {
+        ObjectNode actor = objectMapper.createObjectNode();
+        actor.put("userId", userId);
+        return actor;
+    }
+
+    private PlanSocketMessage ack(Long tripId, String seq) {
+        return message("ack", tripId, null, seq, objectMapper.createObjectNode());
+    }
+
+    private PlanSocketMessage error(Long tripId, String code, String errorMessage) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("code", code);
+        payload.put("message", errorMessage);
+        return message("error", tripId, null, null, payload);
+    }
+
+    private PlanSocketMessage message(String type, Long tripId, JsonNode actor, String seq, JsonNode payload) {
+        return message(type, tripId, actor, seq, OffsetDateTime.now(), payload);
+    }
+
+    private PlanSocketMessage message(String type, Long tripId, JsonNode actor, String seq, OffsetDateTime ts, JsonNode payload) {
+        return new PlanSocketMessage(type, tripId, actor, seq, ts, payload);
+    }
+
+    private String payloadText(JsonNode payload, String fieldName) {
+        if (payload == null || !payload.has(fieldName) || payload.get(fieldName).isNull()) {
+            return null;
+        }
+        return payload.get(fieldName).asText();
     }
 
     private String editChannel(Long tripId) {
@@ -223,10 +394,6 @@ public class PlanStateService {
 
     private String editLockKey(Long tripId) {
         return EDIT_LOCK_KEY_FORMAT.formatted(tripId);
-    }
-
-    private String seqKey(Long tripId) {
-        return SEQ_KEY_FORMAT.formatted(tripId);
     }
 
     private void acquireEditLock(String lockKey) {
