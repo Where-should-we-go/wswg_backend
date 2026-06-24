@@ -15,9 +15,11 @@ spring:
             client-name: "kakao"
             authorization-grant-type: authorization_code
             client-authentication-method: none
-            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            # 기본은 요청 baseUrl 기반. LAN/핫스팟 데모처럼 프록시 뒤라 baseUrl이 틀어질 땐
+            # KAKAO_REDIRECT_URI 로 고정(카카오 콘솔에 등록한 값과 정확히 일치시킬 것).
+            redirect-uri: "${KAKAO_REDIRECT_URI:{baseUrl}/login/oauth2/code/kakao}"
             scope:
-              - profile_nickname,
+              - profile_nickname
               - account_email
 
         # 카카오의 실제 API 주소들을 등록하는 곳
@@ -30,6 +32,12 @@ spring:
             user-name-attribute: id
   application:
     name: wswg
+
+  # 미디어 업로드 한도 — 기본 1MB 는 사진도 못 올림. 파일당 20MB / 요청 25MB.
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
 
   mvc:
     view:
