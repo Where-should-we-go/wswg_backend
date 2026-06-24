@@ -1,6 +1,10 @@
 services:
   postgres:
-    image: postgis/postgis:16-3.4
+    # PostGIS + pgvector. 기본 postgis 이미지엔 pgvector가 없어 별도 Dockerfile로 추가한다.
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
+    image: wswg-postgis-pgvector:16-3.4
     container_name: wswg-postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-wswg}
