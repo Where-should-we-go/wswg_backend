@@ -1,6 +1,7 @@
 package com.ssafy.wswg.config;
 
 import com.ssafy.wswg.security.CustomOAuth2UserService;
+import com.ssafy.wswg.security.FrontendOriginResolver;
 import com.ssafy.wswg.security.JwtAuthenticationFilter;
 import com.ssafy.wswg.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final FrontendOriginResolver frontendOriginResolver;
 
 
     @Bean
@@ -45,7 +47,7 @@ public class SecurityConfig {
                                     .successHandler(oAuth2SuccessHandler)
                                     .failureHandler((request, response, exception) -> {
                                         exception.printStackTrace();
-                                        response.sendRedirect("http://localhost:3000/?loginError=true");
+                                        response.sendRedirect(frontendOriginResolver.resolve(request) + "/?loginError=true");
                                     }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

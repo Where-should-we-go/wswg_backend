@@ -20,6 +20,7 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     private final RefreshTokenService refreshTokenService;
+    private final FrontendOriginResolver frontendOriginResolver;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -41,8 +42,9 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         response.addHeader("Set-Cookie", refreshTokenCookie.toString());
 
-        //TODO:: 프론트엔드로 리다이렉트할 주소 만들기
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/login/success")
+        // 요청이 들어온 프론트 origin(localhost 또는 LAN IP)으로 되돌려보낸다.
+        String frontendOrigin = frontendOriginResolver.resolve(request);
+        String targetUrl = UriComponentsBuilder.fromUriString(frontendOrigin + "/login/success")
                 .queryParam("accessToken", tokenResponse.getAccessToken())
                         .build().toUriString();
 

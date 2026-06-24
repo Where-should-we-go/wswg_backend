@@ -65,6 +65,12 @@ mybatis:
     # 이 설정을 켜면 XML 매퍼에서 'AS 별칭'을 일일이 달아주지 않고 SELECT * 만 해도 매핑됩니다!
     map-underscore-to-camel-case: true
 
+# OAuth 로그인 후 되돌려보낼 프론트엔드 origin 화이트리스트(콤마 구분).
+# LAN의 다른 PC에서 접속하려면 그 PC가 쓰는 주소를 추가: 예) http://localhost:3000,http://192.168.0.5:3000
+app:
+  frontend:
+    allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:http://localhost:3000}
+
 # jwt
 jwt:
   secret: ${JWT_SECRET}
