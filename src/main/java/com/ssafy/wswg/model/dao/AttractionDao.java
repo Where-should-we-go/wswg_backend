@@ -9,6 +9,7 @@ import com.ssafy.wswg.model.dto.AttractionDetailDto;
 import com.ssafy.wswg.model.dto.AttractionDto;
 import com.ssafy.wswg.model.dto.AttractionSearchCondition;
 import com.ssafy.wswg.model.dto.AttractionSummaryDto;
+import com.ssafy.wswg.model.dto.AiTripRecommendationMatchDto;
 import com.ssafy.wswg.model.dto.NearbyAttractionDto;
 import com.ssafy.wswg.model.dto.SemanticAttractionDto;
 
@@ -27,6 +28,15 @@ public interface AttractionDao {
             @Param("latitude") double latitude,
             @Param("longitude") double longitude,
             @Param("radiusMeters") int radiusMeters,
+            @Param("contentTypeId") Integer contentTypeId,
+            @Param("queryEmbedding") String queryEmbedding,
+            @Param("embeddingModel") String embeddingModel,
+            @Param("limit") int limit);
+
+    List<AiTripRecommendationMatchDto> findAiTripRecommendationMatches(
+            @Param("latitude") Double latitude,
+            @Param("longitude") Double longitude,
+            @Param("radiusMeters") Integer radiusMeters,
             @Param("contentTypeId") Integer contentTypeId,
             @Param("queryEmbedding") String queryEmbedding,
             @Param("embeddingModel") String embeddingModel,

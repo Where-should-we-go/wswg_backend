@@ -88,6 +88,8 @@ tour-api:
 
 openai:
   api-key: ${OPENAI_API_KEY:}                 # 값으로 GMS Key를 주입
+  chat-model: gpt-4o-mini
+  chat-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions
   embedding-model: text-embedding-3-small
   embedding-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings
 

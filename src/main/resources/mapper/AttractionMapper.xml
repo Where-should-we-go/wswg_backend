@@ -107,6 +107,64 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findAiTripRecommendationMatches" resultType="com.ssafy.wswg.model.dto.AiTripRecommendationMatchDto">
+        SELECT
+            a.no,
+            a.content_id,
+            a.title,
+            a.content_type_id,
+            a.sido_code,
+            s.sido_name,
+            a.gugun_code,
+            g.gugun_name,
+            a.first_image1,
+            a.first_image2,
+            a.latitude,
+            a.longitude,
+            a.addr1,
+            a.addr2,
+            <choose>
+                <when test="latitude != null and longitude != null">
+                    ST_Distance(
+                        a.geom::geography,
+                        ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)::geography
+                    )
+                </when>
+                <otherwise>
+                    NULL
+                </otherwise>
+            </choose> AS distance_meters,
+            1 - (e.embedding &lt;=&gt; CAST(#{queryEmbedding} AS vector)) AS similarity
+        FROM attractions a
+        INNER JOIN attraction_embeddings e
+            ON e.content_id = a.content_id
+           AND e.embedding_model = #{embeddingModel}
+        LEFT JOIN sidos s
+            ON s.sido_code = a.sido_code
+        LEFT JOIN guguns g
+            ON g.sido_code = a.sido_code
+           AND g.gugun_code = a.gugun_code
+        WHERE 1 = 1
+        <if test="latitude != null and longitude != null and radiusMeters != null">
+          AND a.geom IS NOT NULL
+          AND a.latitude IS NOT NULL
+          AND a.longitude IS NOT NULL
+          AND ST_DWithin(
+                a.geom::geography,
+                ST_SetSRID(ST_MakePoint(#{longitude}, #{latitude}), 4326)::geography,
+                #{radiusMeters}
+          )
+        </if>
+        <if test="contentTypeId != null">
+          AND a.content_type_id = #{contentTypeId}
+        </if>
+        ORDER BY
+            e.embedding &lt;=&gt; CAST(#{queryEmbedding} AS vector),
+            distance_meters ASC NULLS LAST,
+            a.no ASC
+        LIMIT #{limit}
+    </select>
+
     <!--
       검색 필터 공통 WHERE. search/countSearch가 함께 쓴다.
       모든 조건은 attractions(a) 컬럼에만 걸리므로 COUNT에는 조인이 필요 없다.
