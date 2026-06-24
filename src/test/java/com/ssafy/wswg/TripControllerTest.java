@@ -3,6 +3,7 @@ package com.ssafy.wswg;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -28,7 +30,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.wswg.controller.TripController;
 import com.ssafy.wswg.model.dto.TripCreateRequestDto;
 import com.ssafy.wswg.model.dto.TripDto;
+import com.ssafy.wswg.model.dto.TripMediaUploadResponse;
 import com.ssafy.wswg.model.dto.TripUpdateRequestDto;
+import com.ssafy.wswg.model.service.TripMediaService;
 import com.ssafy.wswg.model.service.TripService;
 import com.ssafy.wswg.security.LoginUserId;
 
@@ -39,12 +43,14 @@ class TripControllerTest {
 
     private MockMvc mockMvc;
     private RecordingTripService tripService;
+    private RecordingTripMediaService tripMediaService;
 
     @BeforeEach
     void setUp() {
         tripService = new RecordingTripService();
+        tripMediaService = new RecordingTripMediaService();
         mockMvc = MockMvcBuilders
-                .standaloneSetup(new TripController(tripService))
+                .standaloneSetup(new TripController(tripService, tripMediaService))
                 .setCustomArgumentResolvers(new TestLoginUserIdArgumentResolver())
                 .build();
     }
@@ -92,6 +98,30 @@ class TripControllerTest {
 
         assertThat(tripService.updateTripId).isEqualTo(10L);
         assertThat(tripService.deleteTripId).isEqualTo(10L);
+    }
+
+    @Test
+    void uploadMedia_delegatesMultipartRequest() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "photo.jpg",
+                "image/jpeg",
+                "fake-image".getBytes());
+
+        mockMvc.perform(multipart("/api/trips/10/items/block-1/media")
+                        .file(file)
+                        .param("mediaType", "PHOTO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tripId").value(10))
+                .andExpect(jsonPath("$.itemId").value("block-1"))
+                .andExpect(jsonPath("$.mediaType").value("PHOTO"))
+                .andExpect(jsonPath("$.mediaUrl").value("https://cdn.example.com/photo.jpg"));
+
+        assertThat(tripMediaService.uploadTripId).isEqualTo(10L);
+        assertThat(tripMediaService.uploadUserId).isEqualTo(LOGIN_USER_ID);
+        assertThat(tripMediaService.uploadItemId).isEqualTo("block-1");
+        assertThat(tripMediaService.uploadMediaType).isEqualTo("PHOTO");
+        assertThat(tripMediaService.uploadFilename).isEqualTo("photo.jpg");
     }
 
     private static class RecordingTripService extends TripService {
@@ -153,6 +183,40 @@ class TripControllerTest {
         @Override
         public void deleteTrip(Long tripId, Long userId) {
             deleteTripId = tripId;
+        }
+    }
+
+    private static class RecordingTripMediaService extends TripMediaService {
+        private Long uploadTripId;
+        private Long uploadUserId;
+        private String uploadItemId;
+        private String uploadMediaType;
+        private String uploadFilename;
+
+        RecordingTripMediaService() {
+            super(null, null, null, null);
+        }
+
+        @Override
+        public TripMediaUploadResponse uploadMedia(
+                Long tripId,
+                Long userId,
+                String itemId,
+                String mediaType,
+                org.springframework.web.multipart.MultipartFile file) {
+            uploadTripId = tripId;
+            uploadUserId = userId;
+            uploadItemId = itemId;
+            uploadMediaType = mediaType;
+            uploadFilename = file.getOriginalFilename();
+
+            TripMediaUploadResponse response = new TripMediaUploadResponse();
+            response.setTripId(tripId);
+            response.setItemId(itemId);
+            response.setMediaType(mediaType);
+            response.setMediaUrl("https://cdn.example.com/photo.jpg");
+
+            return response;
         }
     }
 
