@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,9 @@ import com.ssafy.wswg.exception.CommonException;
 import com.ssafy.wswg.exception.ErrorCode;
 import com.ssafy.wswg.model.dto.AiTripCandidateResponse;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class OpenAiTripCandidateClient {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -36,6 +40,7 @@ public class OpenAiTripCandidateClient {
 
     public AiTripCandidateResponse createCandidates(String message, int count) {
         if (!StringUtils.hasText(apiKey)) {
+            log.error("OpenAI 후보 생성 실패: API 키가 설정되지 않았습니다. (OPENAI_API_KEY 환경변수 확인)");
             throw new CommonException(ErrorCode.AI_TRIP_CANDIDATE_FAILED);
         }
 
@@ -50,15 +55,25 @@ public class OpenAiTripCandidateClient {
                     ? null
                     : response.choices().get(0).message().content();
             if (!StringUtils.hasText(content)) {
+                log.error("OpenAI 후보 생성 실패: 응답 본문이 비어 있습니다.");
                 throw new CommonException(ErrorCode.AI_TRIP_CANDIDATE_FAILED);
             }
 
             return OBJECT_MAPPER.readValue(content, AiTripCandidateResponse.class);
         } catch (CommonException e) {
             throw e;
+        } catch (RestClientResponseException e) {
+            // 인증 키는 요청 헤더에만 있어 응답 본문/상태에는 노출되지 않음
+            log.error("OpenAI 후보 생성 실패: HTTP {} {} - {}",
+                    e.getStatusCode().value(),
+                    e.getStatusText(),
+                    e.getResponseBodyAsString());
+            throw new CommonException(ErrorCode.AI_TRIP_CANDIDATE_FAILED);
         } catch (JsonProcessingException e) {
+            log.error("OpenAI 후보 생성 실패: 응답 JSON 파싱 실패", e);
             throw new CommonException(ErrorCode.AI_TRIP_CANDIDATE_FAILED);
         } catch (Exception e) {
+            log.error("OpenAI 후보 생성 실패: 예기치 못한 오류 ({})", e.getClass().getSimpleName(), e);
             throw new CommonException(ErrorCode.AI_TRIP_CANDIDATE_FAILED);
         }
     }
