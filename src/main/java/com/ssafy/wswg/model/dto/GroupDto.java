@@ -16,4 +16,5 @@ public class GroupDto {
     private OffsetDateTime createdAt;
     private OffsetDateTime joinedAt;
     private Integer memberCount;
+    private Integer tripCount;
 }

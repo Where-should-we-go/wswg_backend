@@ -33,7 +33,8 @@
             g.owner_id,
             g.created_at,
             ug.joined_at,
-            COUNT(ug_all.user_id)::integer AS member_count
+            COUNT(ug_all.user_id)::integer AS member_count,
+            (SELECT COUNT(*)::integer FROM trips t WHERE t.group_id = g.group_id) AS trip_count
         FROM groups g
         INNER JOIN user_group ug
             ON ug.group_id = g.group_id
@@ -51,7 +52,8 @@
             g.owner_id,
             g.created_at,
             ug.joined_at,
-            COUNT(ug_all.user_id)::integer AS member_count
+            COUNT(ug_all.user_id)::integer AS member_count,
+            (SELECT COUNT(*)::integer FROM trips t WHERE t.group_id = g.group_id) AS trip_count
         FROM groups g
         INNER JOIN user_group ug
             ON ug.group_id = g.group_id
@@ -250,6 +252,7 @@
         <result property="longitude" column="longitude"/>
         <result property="mediaType" column="media_type"/>
         <result property="mediaUrl" column="media_url"/>
+        <result property="representative" column="representative"/>
         <result property="metadata"
                 column="metadata"
                 typeHandler="com.ssafy.wswg.model.typehandler.JsonNodeTypeHandler"/>
@@ -274,7 +277,6 @@
                 END
             ) item
             WHERE t.group_id = #{groupId}
-              AND t.end_date &lt; CURRENT_DATE
         ),
         block_media AS (
             SELECT
@@ -313,6 +315,7 @@
             ) AS longitude,
             bm.media -&gt;&gt; 'type' AS media_type,
             bm.media -&gt;&gt; 'url' AS media_url,
+            COALESCE((bm.media -&gt;&gt; 'representative')::boolean, false) AS representative,
             COALESCE(bm.media -&gt; 'metadata', '{}'::jsonb) AS metadata
         FROM block_media bm
         LEFT JOIN attractions a
@@ -336,7 +339,7 @@
         <if test="request.mediaType != null">
           AND UPPER(bm.media -&gt;&gt; 'type') = #{request.mediaType}
         </if>
-        ORDER BY bm.trip_id DESC, visit_date ASC NULLS LAST, block_id ASC, media_url ASC
+        ORDER BY representative DESC, bm.trip_id DESC, visit_date ASC NULLS LAST, block_id ASC, media_url ASC
     </select>
 
     <update id="updateGroupName">
