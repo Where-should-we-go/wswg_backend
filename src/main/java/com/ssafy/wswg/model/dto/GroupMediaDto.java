@@ -27,5 +27,6 @@ public class GroupMediaDto {
     private Double longitude;
     private String mediaType;
     private String mediaUrl;
+    private Boolean representative;
     private JsonNode metadata;
 }
