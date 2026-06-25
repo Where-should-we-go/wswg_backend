@@ -53,7 +53,13 @@ public class PlanEditWebSocketHandler extends TextWebSocketHandler {
         Long userId = getRequiredAttribute(session, USER_ID_ATTRIBUTE);
         PlanEditEvent event = objectMapper.readValue(message.getPayload(), PlanEditEvent.class);
 
-        send(session, planStateService.applyEdit(tripId, userId, event));
+        try {
+            send(session, planStateService.applyEdit(tripId, userId, event));
+        } catch (CommonException e) {
+            // 편집 처리 실패(BUSY/잘못된 JSON 등)는 소켓을 끊지 말고 구조화된 error 로 회신.
+            // 클라이언트는 clientOpId·code 로 재시도(BUSY)/폐기(그 외)를 판단한다.
+            send(session, planStateService.errorMessage(tripId, event, e));
+        }
     }
 
     @Override
