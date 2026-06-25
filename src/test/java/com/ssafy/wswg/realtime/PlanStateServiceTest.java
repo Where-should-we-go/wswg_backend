@@ -117,6 +117,73 @@ class PlanStateServiceTest {
     }
 
     @Test
+    void applyEdit_echoesClientOpIdInAck() throws Exception {
+        redisTemplate.values.put("plan:10:state", "{\"items\":[{\"id\":\"item-1\",\"title\":\"이전\"}]}");
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "item-1");
+        payload.put("clientOpId", "c-abc:1");
+        payload.set("patch", objectMapper.createObjectNode().put("title", "새 제목"));
+
+        PlanEditEvent event = new PlanEditEvent();
+        event.setType("block.update");
+        event.setPayload(payload);
+
+        PlanSocketMessage ack = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+
+        assertThat(ack.getType()).isEqualTo("ack");
+        assertThat(ack.getPayload().get("clientOpId").asText()).isEqualTo("c-abc:1");
+    }
+
+    @Test
+    void applyEdit_isIdempotentWhenSameClientOpIdResent() throws Exception {
+        redisTemplate.values.put("plan:10:state", "{\"items\":[{\"id\":\"item-1\",\"title\":\"이전\",\"order\":1}]}");
+
+        ObjectNode patch = objectMapper.createObjectNode().put("order", 5);
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "item-1");
+        payload.put("clientOpId", "c-abc:7");
+        payload.set("patch", patch);
+
+        PlanEditEvent event = new PlanEditEvent();
+        event.setType("block.update");
+        event.setPayload(payload);
+
+        PlanSocketMessage first = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+        // 재연결 후 같은 op 재전송 — 중복 적용/중복 stream 없이 ack 만.
+        PlanSocketMessage second = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+
+        assertThat(first.getType()).isEqualTo("ack");
+        assertThat(second.getType()).isEqualTo("ack");
+        assertThat(second.getPayload().get("clientOpId").asText()).isEqualTo("c-abc:7");
+        // stream 에 record 가 1개만(중복 append 없음).
+        assertThat(redisTemplate.streams.get("plan:10:stream")).hasSize(1);
+    }
+
+    @Test
+    void applyEdit_releasesClientOpIdOnStaleSoRetryIsNotBlocked() throws Exception {
+        redisTemplate.values.put("plan:10:state", "{\"items\":[]}");
+
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("id", "missing");
+        payload.put("clientOpId", "c-abc:9");
+        payload.set("patch", objectMapper.createObjectNode().put("title", "X"));
+
+        PlanEditEvent event = new PlanEditEvent();
+        event.setType("block.update");
+        event.setPayload(payload);
+
+        PlanSocketMessage error = planStateService.applyEdit(TRIP_ID, USER_ID, event);
+
+        assertThat(error.getType()).isEqualTo("error");
+        assertThat(error.getPayload().get("code").asText()).isEqualTo("STALE");
+        assertThat(error.getPayload().get("clientOpId").asText()).isEqualTo("c-abc:9");
+        // 멱등 표식이 회수되어 같은 opId 가 다시 적용 가능해야 함(재시도 차단 방지).
+        assertThat(redisTemplate.sets.getOrDefault("plan:10:appliedOps", java.util.Set.of()))
+                .doesNotContain("c-abc:9");
+    }
+
+    @Test
     void appendBlockMedia_updatesRedisStateAndPublishesBlockUpdate() throws Exception {
         redisTemplate.values.put("plan:10:state", "{\"items\":[{\"id\":\"item-1\",\"title\":\"경복궁\"}]}");
 

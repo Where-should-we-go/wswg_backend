@@ -80,6 +80,12 @@ class FakeStringRedisTemplate extends StringRedisTemplate {
         return true;
     }
 
+    @Override
+    public Boolean expire(String key, long timeout, java.util.concurrent.TimeUnit unit) {
+        // TTL 은 테스트에서 의미 없음 — no-op(실 Redis 연결 회피).
+        return true;
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T proxy(Class<T> type, InvocationHandler handler) {
         return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[] { type }, handler);
@@ -121,6 +127,19 @@ class FakeStringRedisTemplate extends StringRedisTemplate {
 
         if ("members".equals(methodName)) {
             return new LinkedHashSet<>(sets.getOrDefault((String) args[0], java.util.Set.of()));
+        }
+
+        if ("remove".equals(methodName)) {
+            java.util.Set<String> set = sets.get((String) args[0]);
+            if (set == null) {
+                return 0L;
+            }
+            Object[] valuesToRemove = args[1] instanceof Object[] array ? array : new Object[] { args[1] };
+            long removed = 0L;
+            for (Object value : valuesToRemove) {
+                removed += set.remove((String) value) ? 1 : 0;
+            }
+            return removed;
         }
 
         return defaultValue(method.getReturnType());

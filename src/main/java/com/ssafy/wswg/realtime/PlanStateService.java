@@ -36,10 +36,13 @@ public class PlanStateService {
     private static final String LAST_FLUSHED_ID_KEY_FORMAT = "plan:%d:lastFlushedId";
     private static final String PRESENCE_KEY_FORMAT = "plan:%d:presence";
     private static final String EDIT_LOCK_KEY_FORMAT = "plan:%d:editLock";
+    private static final String APPLIED_OPS_KEY_FORMAT = "plan:%d:appliedOps";
     private static final String STREAMS_KEY = "plan:streams";
     private static final String INITIAL_STREAM_ID = "0-0";
     private static final Duration EDIT_LOCK_TTL = Duration.ofSeconds(3);
     private static final Duration PRESENCE_TTL = Duration.ofSeconds(30);
+    // 재연결 후 미확인 op 재전송 시 중복 적용을 막는 멱등 키 보관 기간.
+    private static final Duration APPLIED_OPS_TTL = Duration.ofHours(1);
     private static final String TYPE_BLOCK_ADD = "block.add";
     private static final String TYPE_BLOCK_UPDATE = "block.update";
     private static final String TYPE_BLOCK_REMOVE = "block.remove";
@@ -73,27 +76,38 @@ public class PlanStateService {
     }
 
     public PlanSocketMessage applyEdit(Long tripId, Long userId, PlanEditEvent event) {
-        tripService.readTrip(tripId, userId);
+        String type = event.getType();
+        if (type == null || type.isBlank()) {
+            throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+        }
+
+        // 권한 확인 + Redis state 워밍은 락 밖에서(락 안에서 DB를 치지 않도록).
+        // 워밍을 미리 해두면 락 구간은 순수 Redis 연산만 남아 경합·BUSY 거부가 크게 준다.
+        loadState(tripId, userId);
+
+        String clientOpId = payloadText(event.getPayload(), "clientOpId");
+
+        // presence 는 휘발성이라 편집 락이 필요 없음 — 락 밖에서 바로 처리.
+        if (TYPE_PRESENCE.equals(type)) {
+            PlanSocketMessage presenceMessage = applyPresence(tripId, userId, event);
+            stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(presenceMessage));
+            return ack(tripId, null, clientOpId);
+        }
 
         String lockKey = editLockKey(tripId);
         acquireEditLock(lockKey);
 
         try {
-            String type = event.getType();
-            if (type == null || type.isBlank()) {
-                throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
+            // 멱등: 재연결 후 같은 op 를 다시 받으면 중복 적용하지 않고 ack 만 돌려준다.
+            if (clientOpId != null && !markOpApplied(tripId, clientOpId)) {
+                return ack(tripId, lastSeq(tripId), clientOpId);
             }
 
-            if (TYPE_PRESENCE.equals(type)) {
-                PlanSocketMessage presenceMessage = applyPresence(tripId, userId, event);
-                stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(presenceMessage));
-                return ack(tripId, null);
-            }
-
-            JsonNode state = loadState(tripId, userId);
+            JsonNode state = currentState(tripId);
             JsonNode nextState = mutateState(state, event);
             if (nextState == null) {
-                return error(tripId, "STALE", "대상 블록이 이미 삭제되었거나 존재하지 않습니다.");
+                releaseOp(tripId, clientOpId);
+                return error(tripId, "STALE", "대상 블록이 이미 삭제되었거나 존재하지 않습니다.", clientOpId);
             }
 
             OffsetDateTime ts = OffsetDateTime.now();
@@ -105,10 +119,20 @@ public class PlanStateService {
             PlanSocketMessage message = message(type, tripId, actor, seq, ts, event.getPayload());
             stringRedisTemplate.convertAndSend(editChannel(tripId), writeJson(message));
 
-            return ack(tripId, seq);
+            return ack(tripId, seq, clientOpId);
+        } catch (RuntimeException e) {
+            releaseOp(tripId, clientOpId);
+            throw e;
         } finally {
             stringRedisTemplate.delete(lockKey);
         }
+    }
+
+    // 핸들러에서 applyEdit 가 던진 예외(PLAN_EDIT_BUSY 등)를 구조화된 error 메시지로 변환.
+    // 소켓을 끊지 않고 클라이언트가 clientOpId 로 어떤 op 가 실패했는지 알 수 있게 한다.
+    public PlanSocketMessage errorMessage(Long tripId, PlanEditEvent event, CommonException e) {
+        String clientOpId = event == null ? null : payloadText(event.getPayload(), "clientOpId");
+        return error(tripId, e.getErrorCode().name(), e.getErrorCode().getMessage(), clientOpId);
     }
 
     public void clearPresence(Long tripId, Long userId) {
@@ -130,13 +154,14 @@ public class PlanStateService {
     }
 
     public JsonNode appendBlockMedia(Long tripId, Long userId, String itemId, ObjectNode media) {
-        tripService.readTrip(tripId, userId);
+        // 권한 확인 + Redis state 워밍을 락 밖에서.
+        loadState(tripId, userId);
 
         String lockKey = editLockKey(tripId);
         acquireEditLock(lockKey);
 
         try {
-            JsonNode state = loadState(tripId, userId);
+            JsonNode state = currentState(tripId);
             ObjectNode nextState = normalizeState(state).deepCopy();
             ObjectNode item = findItemOrNull(ensureItems(nextState), itemId);
             if (item == null) {
@@ -198,6 +223,35 @@ public class PlanStateService {
         } catch (JsonProcessingException e) {
             throw new CommonException(ErrorCode.BAD_REQUEST_JSON);
         }
+    }
+
+    // 락 안에서 쓰는 Redis 전용 state 조회(DB 미접근). applyEdit 진입 시 loadState 로 워밍됨.
+    // 만에 하나 워밍 후 키가 사라졌다면(만료 등) 빈 state 로 정규화 — 호출부에서 STALE 처리됨.
+    private JsonNode currentState(Long tripId) {
+        String stateJson = stringRedisTemplate.opsForValue().get(stateKey(tripId));
+        if (stateJson != null) {
+            return readJson(stateJson);
+        }
+        return normalizeState(null);
+    }
+
+    // 새 op 면 true(적용 진행), 이미 적용된 op 면 false(중복 → 재-ack). SADD 의 멱등성 활용.
+    private boolean markOpApplied(Long tripId, String clientOpId) {
+        String key = appliedOpsKey(tripId);
+        Long added = stringRedisTemplate.opsForSet().add(key, clientOpId);
+        stringRedisTemplate.expire(key, APPLIED_OPS_TTL);
+        return added != null && added > 0;
+    }
+
+    // op 가 실제로 적용되지 못했을 때(STALE/예외) 멱등 표식을 회수 — 재시도가 막히지 않도록.
+    private void releaseOp(Long tripId, String clientOpId) {
+        if (clientOpId != null) {
+            stringRedisTemplate.opsForSet().remove(appliedOpsKey(tripId), clientOpId);
+        }
+    }
+
+    private String appliedOpsKey(Long tripId) {
+        return APPLIED_OPS_KEY_FORMAT.formatted(tripId);
     }
 
     private JsonNode mutateState(JsonNode state, PlanEditEvent event) {
@@ -416,14 +470,21 @@ public class PlanStateService {
         return actor;
     }
 
-    private PlanSocketMessage ack(Long tripId, String seq) {
-        return message("ack", tripId, null, seq, objectMapper.createObjectNode());
+    private PlanSocketMessage ack(Long tripId, String seq, String clientOpId) {
+        ObjectNode payload = objectMapper.createObjectNode();
+        if (clientOpId != null) {
+            payload.put("clientOpId", clientOpId);
+        }
+        return message("ack", tripId, null, seq, payload);
     }
 
-    private PlanSocketMessage error(Long tripId, String code, String errorMessage) {
+    private PlanSocketMessage error(Long tripId, String code, String errorMessage, String clientOpId) {
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("code", code);
         payload.put("message", errorMessage);
+        if (clientOpId != null) {
+            payload.put("clientOpId", clientOpId);
+        }
         return message("error", tripId, null, null, payload);
     }
 

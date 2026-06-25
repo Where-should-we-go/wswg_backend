@@ -168,6 +168,15 @@
         WHERE trip_id = #{tripId}
     </update>
 
+    <update id="updateTripMeta">
+        UPDATE trips
+        SET
+            title = #{title},
+            start_date = #{startDate},
+            end_date = #{endDate}
+        WHERE trip_id = #{tripId}
+    </update>
+
     <delete id="deleteTrip">
         DELETE FROM trips
         WHERE trip_id = #{tripId}
