@@ -277,7 +277,6 @@
                 END
             ) item
             WHERE t.group_id = #{groupId}
-              AND t.end_date &lt; CURRENT_DATE
         ),
         block_media AS (
             SELECT
