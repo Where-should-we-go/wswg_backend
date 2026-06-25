@@ -200,6 +200,13 @@
                     replace(replace(replace(#{cond.keyword}, '\', '\\'), '%', '\%'), '_', '\_')
                     || '%' ESCAPE '\'
             </if>
+            <!--
+              hasImage=true면 대표 이미지가 있는 행만 남긴다. search와 countSearch가 이
+              searchWhere를 공유하므로 목록과 totalElements가 같은 기준으로 맞춰진다.
+            -->
+            <if test="cond.hasImage">
+                AND a.first_image1 IS NOT NULL AND a.first_image1 != ''
+            </if>
         </where>
     </sql>
 
