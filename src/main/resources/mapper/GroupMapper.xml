@@ -20,6 +20,12 @@
         ON CONFLICT (user_id, group_id) DO NOTHING
     </insert>
 
+    <delete id="removeMember">
+        DELETE FROM user_group
+        WHERE group_id = #{groupId}
+          AND user_id = #{userId}
+    </delete>
+
     <select id="readGroupsByUserId" resultType="com.ssafy.wswg.model.dto.GroupDto">
         SELECT
             g.group_id,

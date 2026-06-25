@@ -20,6 +20,7 @@ public enum ErrorCode {
     INVALID_TRIP_STATUS(40008, HttpStatus.BAD_REQUEST, "status는 UPCOMING, ONGOING, COMPLETED만 사용할 수 있습니다."),
     INVALID_TRIP_REQUEST(40009, HttpStatus.BAD_REQUEST, "여행 계획 요청 값을 확인해 주세요."),
     INVALID_MEDIA_UPLOAD_REQUEST(40010, HttpStatus.BAD_REQUEST, "미디어 업로드 요청 값을 확인해 주세요."),
+    CANNOT_REMOVE_GROUP_OWNER(40011, HttpStatus.BAD_REQUEST, "모임장은 모임에서 내보낼 수 없습니다."),
     INVALID_AI_RECOMMENDATION_REQUEST(40011, HttpStatus.BAD_REQUEST, "AI 여행지 추천 요청 값을 확인해 주세요."),
 
     // 401
