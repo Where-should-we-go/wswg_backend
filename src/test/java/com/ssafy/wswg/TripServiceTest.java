@@ -225,6 +225,19 @@ class TripServiceTest {
         }
 
         @Override
+        public int updateTripMeta(Long tripId, String title, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+            TripDto existing = saved.get(tripId);
+            if (existing == null) {
+                return 0;
+            }
+
+            existing.setTitle(title);
+            existing.setStartDate(startDate);
+            existing.setEndDate(endDate);
+            return 1;
+        }
+
+        @Override
         public int deleteTrip(Long tripId) {
             return saved.remove(tripId) == null ? 0 : 1;
         }

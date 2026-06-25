@@ -174,6 +174,11 @@ class TripMediaServiceTest {
         }
 
         @Override
+        public int updateTripMeta(Long tripId, String title, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+            return 1;
+        }
+
+        @Override
         public int deleteTrip(Long tripId) {
             return 0;
         }

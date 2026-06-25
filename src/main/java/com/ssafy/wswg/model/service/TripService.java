@@ -129,6 +129,26 @@ public class TripService {
         return readTrip(tripId, userId);
     }
 
+    // 제목·기간 컬럼만 갱신(data JSONB 미접근). 공동편집 중 제목/날짜 저장이 Redis state 와
+    // 무관하게 동작하도록 — 전체 PUT 이 data 를 덮어써 flush 워커와 충돌하는 문제를 피한다.
+    @Transactional
+    public TripDto updateTripMeta(Long tripId, Long userId, TripUpdateRequestDto request) {
+        TripDto existingTrip = findTrip(tripId);
+        // 제목·날짜는 여행 내용 편집이므로 본문 편집(updateTrip)과 동일하게 그룹 멤버 허용.
+        validateEditable(existingTrip, userId);
+
+        String title = normalizeTitle(request == null ? null : request.getTitle());
+        LocalDate startDate = request == null ? null : request.getStartDate();
+        LocalDate endDate = request == null ? null : request.getEndDate();
+        validateDates(startDate, endDate);
+
+        if (tripDao.updateTripMeta(tripId, title, startDate, endDate) == 0) {
+            throw new CommonException(ErrorCode.NOT_FOUND_TRIP);
+        }
+
+        return readTrip(tripId, userId);
+    }
+
     @Transactional
     public void deleteTrip(Long tripId, Long userId) {
         TripDto trip = findTrip(tripId);

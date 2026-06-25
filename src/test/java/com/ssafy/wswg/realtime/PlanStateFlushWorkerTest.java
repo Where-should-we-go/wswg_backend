@@ -103,6 +103,11 @@ class PlanStateFlushWorkerTest {
         }
 
         @Override
+        public int updateTripMeta(Long tripId, String title, java.time.LocalDate startDate, java.time.LocalDate endDate) {
+            return 1;
+        }
+
+        @Override
         public List<MyPageTripResponse> readMyTrips(Long userId, String status) {
             throw new UnsupportedOperationException();
         }
