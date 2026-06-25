@@ -99,6 +99,78 @@
         ORDER BY owner DESC, ug.joined_at ASC, u.id ASC
     </select>
 
+    <insert id="createJoinRequest">
+        INSERT INTO group_join_requests (group_id, user_id, status, requested_at, resolved_at)
+        VALUES (#{groupId}, #{userId}, 'PENDING', now(), NULL)
+        ON CONFLICT (group_id, user_id) DO UPDATE
+        SET status = 'PENDING',
+            requested_at = now(),
+            resolved_at = NULL
+    </insert>
+
+    <select id="readJoinRequest" resultType="com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto">
+        SELECT
+            gjr.request_id,
+            gjr.group_id,
+            gjr.user_id,
+            u.name,
+            u.email,
+            u.profile_image_url,
+            gjr.status,
+            gjr.requested_at,
+            gjr.resolved_at
+        FROM group_join_requests gjr
+        INNER JOIN users u
+            ON u.id = gjr.user_id
+        WHERE gjr.group_id = #{groupId}
+          AND gjr.request_id = #{requestId}
+    </select>
+
+    <select id="readJoinRequestByUser" resultType="com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto">
+        SELECT
+            gjr.request_id,
+            gjr.group_id,
+            gjr.user_id,
+            u.name,
+            u.email,
+            u.profile_image_url,
+            gjr.status,
+            gjr.requested_at,
+            gjr.resolved_at
+        FROM group_join_requests gjr
+        INNER JOIN users u
+            ON u.id = gjr.user_id
+        WHERE gjr.group_id = #{groupId}
+          AND gjr.user_id = #{userId}
+    </select>
+
+    <select id="readPendingJoinRequests" resultType="com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto">
+        SELECT
+            gjr.request_id,
+            gjr.group_id,
+            gjr.user_id,
+            u.name,
+            u.email,
+            u.profile_image_url,
+            gjr.status,
+            gjr.requested_at,
+            gjr.resolved_at
+        FROM group_join_requests gjr
+        INNER JOIN users u
+            ON u.id = gjr.user_id
+        WHERE gjr.group_id = #{groupId}
+          AND gjr.status = 'PENDING'
+        ORDER BY gjr.requested_at ASC, gjr.request_id ASC
+    </select>
+
+    <update id="approveJoinRequest">
+        UPDATE group_join_requests
+        SET status = 'APPROVED',
+            resolved_at = now()
+        WHERE request_id = #{requestId}
+          AND status = 'PENDING'
+    </update>
+
     <select id="readFootprints" resultType="com.ssafy.wswg.model.dto.GroupFootprintDto">
         WITH completed_trip_regions AS (
             SELECT

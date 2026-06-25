@@ -19,6 +19,7 @@ import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
+import com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto;
 import com.ssafy.wswg.model.dto.GroupMediaDto;
 import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
@@ -104,10 +105,25 @@ public class GroupController {
     }
 
     @PostMapping("/join")
-    public ResponseEntity<GroupDto> joinGroup(
+    public ResponseEntity<GroupJoinRequestStatusDto> joinGroup(
             @LoginUserId Long userId,
             @RequestBody(required = false) GroupJoinRequestDto request) {
         return ResponseEntity.ok(groupService.joinGroup(userId, request));
+    }
+
+    @GetMapping("/{groupId}/join-requests")
+    public ResponseEntity<List<GroupJoinRequestStatusDto>> readJoinRequests(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId) {
+        return ResponseEntity.ok(groupService.readJoinRequests(groupId, userId));
+    }
+
+    @PostMapping("/{groupId}/join-requests/{requestId}/approve")
+    public ResponseEntity<GroupMemberDto> approveJoinRequest(
+            @LoginUserId Long userId,
+            @PathVariable Long groupId,
+            @PathVariable Long requestId) {
+        return ResponseEntity.ok(groupService.approveJoinRequest(groupId, userId, requestId));
     }
 
     @DeleteMapping("/{groupId}")

@@ -36,6 +36,7 @@ public enum ErrorCode {
     NOT_FOUND_ATTRACTION(40402, HttpStatus.NOT_FOUND, "존재하지 않는 관광지입니다."),
     NOT_FOUND_TRIP(40403, HttpStatus.NOT_FOUND, "존재하지 않는 여행 계획입니다."),
     NOT_FOUND_TRIP_ITEM(40404, HttpStatus.NOT_FOUND, "존재하지 않는 여행 일정 항목입니다."),
+    NOT_FOUND_GROUP_JOIN_REQUEST(40405, HttpStatus.NOT_FOUND, "존재하지 않는 가입 요청입니다."),
 
     // 409
     TOUR_LOAD_ALREADY_RUNNING(40900, HttpStatus.CONFLICT, "관광정보 적재가 이미 진행 중입니다."),

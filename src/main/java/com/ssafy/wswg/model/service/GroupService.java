@@ -18,6 +18,7 @@ import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
 import com.ssafy.wswg.model.dto.GroupInviteLinkDto;
 import com.ssafy.wswg.model.dto.GroupJoinRequestDto;
+import com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto;
 import com.ssafy.wswg.model.dto.GroupMediaDto;
 import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberAddRequestDto;
@@ -107,6 +108,7 @@ public class GroupService {
         GroupInviteLinkDto inviteLink = new GroupInviteLinkDto();
         inviteLink.setGroupId(groupId);
         inviteLink.setToken(generateInviteToken());
+        inviteLink.setUrl(buildInviteUrl(inviteLink.getToken()));
         inviteLink.setCreatedBy(userId);
         inviteLink.setExpiresAt(OffsetDateTime.now().plusHours(INVITE_EXPIRES_HOURS));
 
@@ -119,7 +121,7 @@ public class GroupService {
     }
 
     @Transactional
-    public GroupDto joinGroup(Long userId, GroupJoinRequestDto request) {
+    public GroupJoinRequestStatusDto joinGroup(Long userId, GroupJoinRequestDto request) {
         String token = normalizeToken(request == null ? null : request.getToken());
         String groupIdValue = stringRedisTemplate.opsForValue().get(getInviteKey(token));
         if (groupIdValue == null) {
@@ -129,9 +131,43 @@ public class GroupService {
         Long groupId = Long.parseLong(groupIdValue);
         validateGroupExists(groupId);
 
-        groupDao.addMember(groupId, userId);
+        if (groupDao.countGroupMember(groupId, userId) > 0) {
+            GroupJoinRequestStatusDto result = new GroupJoinRequestStatusDto();
+            result.setGroupId(groupId);
+            result.setUserId(userId);
+            result.setStatus("ALREADY_MEMBER");
+            return result;
+        }
 
-        return readGroup(groupId, userId);
+        groupDao.createJoinRequest(groupId, userId);
+
+        return groupDao.readJoinRequestByUser(groupId, userId);
+    }
+
+    public List<GroupJoinRequestStatusDto> readJoinRequests(Long groupId, Long userId) {
+        validateOwner(groupId, userId);
+
+        return groupDao.readPendingJoinRequests(groupId);
+    }
+
+    @Transactional
+    public GroupMemberDto approveJoinRequest(Long groupId, Long userId, Long requestId) {
+        validateOwner(groupId, userId);
+
+        GroupJoinRequestStatusDto joinRequest = groupDao.readJoinRequest(groupId, requestId);
+        if (joinRequest == null || !"PENDING".equals(joinRequest.getStatus())) {
+            throw new CommonException(ErrorCode.NOT_FOUND_GROUP_JOIN_REQUEST);
+        }
+
+        groupDao.addMember(groupId, joinRequest.getUserId());
+        if (groupDao.approveJoinRequest(requestId) == 0) {
+            throw new CommonException(ErrorCode.NOT_FOUND_GROUP_JOIN_REQUEST);
+        }
+
+        return groupDao.readMembers(groupId).stream()
+                .filter(member -> joinRequest.getUserId().equals(member.getUserId()))
+                .findFirst()
+                .orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_USER));
     }
 
     @Transactional
@@ -246,5 +282,9 @@ public class GroupService {
 
     private String getInviteKey(String token) {
         return INVITE_KEY_PREFIX + token;
+    }
+
+    private String buildInviteUrl(String token) {
+        return "/groups/join?token=" + token;
     }
 }

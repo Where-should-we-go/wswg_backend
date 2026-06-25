@@ -114,6 +114,18 @@ CREATE TABLE IF NOT EXISTS user_group (
 );
 CREATE INDEX IF NOT EXISTS idx_user_group_group ON user_group(group_id);
 
+CREATE TABLE IF NOT EXISTS group_join_requests (
+    request_id BIGSERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL REFERENCES groups(group_id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    resolved_at TIMESTAMPTZ,
+    UNIQUE (group_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_group_join_requests_group_status
+    ON group_join_requests(group_id, status, requested_at);
+
 -- ============================================================
 -- 여행 (계획↔기록) — 항목/미디어 전체를 data JSONB 문서로 보관
 --   data 예: { "items": [ { "content_id":126508, "title":"경복궁", "type":"관광",
