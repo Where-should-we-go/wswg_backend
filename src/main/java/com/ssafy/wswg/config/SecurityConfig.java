@@ -7,6 +7,7 @@ import com.ssafy.wswg.security.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -38,6 +39,13 @@ public class SecurityConfig {
                         "/swagger-ui/**",
                         "/v3/api-docs/**",
                         "/ws/plans/**").permitAll()
+                // 공개 조회: 관광지·지역 목록/상세는 비로그인 랜딩에서도 노출 (GET 만 허용)
+                .requestMatchers(HttpMethod.GET,
+                        "/api/attractions",
+                        "/api/attractions/**",
+                        "/api/sidos",
+                        "/api/guguns",
+                        "/api/content-types").permitAll()
                 .requestMatchers("/admin").hasRole("ADMIN")
                 .anyRequest().authenticated())
 
