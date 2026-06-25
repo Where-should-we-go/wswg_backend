@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 
 import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
+import com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto;
 import com.ssafy.wswg.model.dto.GroupMediaDto;
 import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
@@ -30,6 +31,20 @@ public interface GroupDao {
     int countUserById(@Param("userId") Long userId);
 
     List<GroupMemberDto> readMembers(@Param("groupId") Long groupId);
+
+    int createJoinRequest(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
+    GroupJoinRequestStatusDto readJoinRequest(
+            @Param("groupId") Long groupId,
+            @Param("requestId") Long requestId);
+
+    GroupJoinRequestStatusDto readJoinRequestByUser(
+            @Param("groupId") Long groupId,
+            @Param("userId") Long userId);
+
+    List<GroupJoinRequestStatusDto> readPendingJoinRequests(@Param("groupId") Long groupId);
+
+    int approveJoinRequest(@Param("requestId") Long requestId);
 
     List<GroupFootprintDto> readFootprints(@Param("groupId") Long groupId);
 
