@@ -16,6 +16,8 @@ import com.ssafy.wswg.model.dto.AiTripPlanCreateRequest;
 import com.ssafy.wswg.model.dto.AiTripRecommendationDto;
 import com.ssafy.wswg.model.dto.AiTripRecommendationRequest;
 import com.ssafy.wswg.model.dto.AiTripRecommendationResponse;
+import com.ssafy.wswg.model.dto.RouteLeg;
+import com.ssafy.wswg.model.dto.TravelMode;
 import com.ssafy.wswg.model.dto.TripCreateRequestDto;
 import com.ssafy.wswg.model.dto.TripDto;
 
@@ -30,6 +32,7 @@ public class AiTripPlanService {
 
     private final AiTripRecommendationService aiTripRecommendationService;
     private final TripService tripService;
+    private final RoutingService routingService;
 
     @Transactional
     public TripDto createPlan(Long userId, AiTripPlanCreateRequest request) {
@@ -91,7 +94,7 @@ public class AiTripPlanService {
             putIfNotNull(item, "image", recommendation.getFirstImage1());
             putIfNotNull(item, "thumbnail", recommendation.getFirstImage2());
             item.put("order", i + 1);
-            item.put("visitDate", visitDate(request.getStartDate(), request.getEndDate(), i));
+            item.put("visitDate", visitDate(request.getStartDate(), request.getEndDate(), i, recommendations.size()));
             item.putArray("media");
 
             ObjectNode properties = item.putObject("properties");
@@ -102,6 +105,10 @@ public class AiTripPlanService {
             putIfNotNull(properties, "matchedCandidateId", recommendation.getMatchedCandidateId());
             putIfNotNull(properties, "matchedCandidateName", recommendation.getMatchedCandidateName());
         }
+
+        TravelMode travelMode = TravelMode.fromNullable(request.getTravelMode());
+        data.put("travelMode", travelMode.name());
+        attachTravelLegs(data, items, travelMode);
 
         ObjectNode aiRecommendation = data.putObject("aiRecommendation");
         aiRecommendation.put("sessionId", request.getSessionId());
@@ -123,7 +130,7 @@ public class AiTripPlanService {
         return title.trim();
     }
 
-    private String visitDate(LocalDate startDate, LocalDate endDate, int index) {
+    private String visitDate(LocalDate startDate, LocalDate endDate, int index, int total) {
         if (startDate == null) {
             return "";
         }
@@ -133,7 +140,76 @@ public class AiTripPlanService {
         }
 
         long days = endDate.toEpochDay() - startDate.toEpochDay() + 1;
-        return startDate.plusDays(index % days).toString();
+        // 청크 배분: 인접한 추천을 같은 날에 모은다(라운드로빈으로 흩뿌리면 이동 동선이 엉킴).
+        int perDay = (int) Math.max(1, Math.ceil((double) total / days));
+        long dayOffset = Math.min(index / perDay, days - 1);
+        return startDate.plusDays(dayOffset).toString();
+    }
+
+    /**
+     * 같은 날 인접한 두 spot 사이의 이동 구간(거리/시간)을 계산해 각 item에 travelToNext로 붙이고,
+     * 날짜별·전체 합계를 data.travel에 기록한다. 이동시간은 부가정보라 실패해도 plan은 그대로 생성된다.
+     */
+    private void attachTravelLegs(ObjectNode data, ArrayNode items, TravelMode mode) {
+        ObjectNode travel = data.putObject("travel");
+        travel.put("mode", mode.name());
+        ObjectNode dayTotals = OBJECT_MAPPER.createObjectNode();
+        long totalDistance = 0;
+        long totalDuration = 0;
+
+        for (int i = 0; i < items.size() - 1; i++) {
+            ObjectNode from = (ObjectNode) items.get(i);
+            ObjectNode to = (ObjectNode) items.get(i + 1);
+
+            if (!sameDay(from, to) || !hasCoordinate(from) || !hasCoordinate(to)) {
+                continue;
+            }
+
+            RouteLeg leg = routingService.leg(mode,
+                    from.get("lat").asDouble(), from.get("lng").asDouble(),
+                    to.get("lat").asDouble(), to.get("lng").asDouble());
+
+            ObjectNode legNode = from.putObject("travelToNext");
+            legNode.put("mode", leg.getMode().name());
+            legNode.put("provider", leg.getProvider());
+            legNode.put("available", leg.isAvailable());
+            if (leg.isAvailable()) {
+                legNode.put("distanceMeters", leg.getDistanceMeters());
+                legNode.put("durationSeconds", leg.getDurationSeconds());
+
+                totalDistance += leg.getDistanceMeters();
+                totalDuration += leg.getDurationSeconds();
+                accumulateDayTotal(dayTotals, from.get("visitDate").asText(),
+                        leg.getDistanceMeters(), leg.getDurationSeconds());
+            }
+        }
+
+        travel.set("dayTotals", dayTotals);
+        travel.put("totalDistanceMeters", totalDistance);
+        travel.put("totalDurationSeconds", totalDuration);
+    }
+
+    private void accumulateDayTotal(ObjectNode dayTotals, String date, long distanceMeters, long durationSeconds) {
+        if (date == null || date.isBlank()) {
+            return;
+        }
+
+        ObjectNode dayTotal = dayTotals.has(date)
+                ? (ObjectNode) dayTotals.get(date)
+                : dayTotals.putObject(date);
+        long distance = dayTotal.path("distanceMeters").asLong(0) + distanceMeters;
+        long duration = dayTotal.path("durationSeconds").asLong(0) + durationSeconds;
+        dayTotal.put("distanceMeters", distance);
+        dayTotal.put("durationSeconds", duration);
+    }
+
+    private boolean sameDay(ObjectNode from, ObjectNode to) {
+        return from.path("visitDate").asText("").equals(to.path("visitDate").asText(""))
+                && !from.path("visitDate").asText("").isBlank();
+    }
+
+    private boolean hasCoordinate(ObjectNode item) {
+        return item.hasNonNull("lat") && item.hasNonNull("lng");
     }
 
     private void putIfNotNull(ObjectNode node, String fieldName, String value) {

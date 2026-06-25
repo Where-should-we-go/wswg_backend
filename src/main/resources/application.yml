@@ -107,6 +107,17 @@ openai:
   embedding-model: text-embedding-3-small
   embedding-url: https://gms.ssafy.io/gmsapi/api.openai.com/v1/embeddings
 
+naver:
+  directions:                                  # 자동차 길찾기 (NCP Directions 5, 지도 JS 키와 별개)
+    key-id: ${NAVER_DIRECTIONS_KEY_ID:}
+    key: ${NAVER_DIRECTIONS_KEY:}
+    url: https://maps.apigw.ntruss.com/map-direction/v1/driving
+
+odsay:                                         # 대중교통 길찾기 (네이버는 대중교통 미지원)
+  api-key: ${ODSAY_API_KEY:}                    # ODsay 웹 서비스 키(URI/Referer 기반 인증)
+  url: https://api.odsay.com/v1/api/searchPubTransPath
+  referer: ${ODSAY_REFERER:http://localhost}    # ODsay에 등록한 서비스 URI와 일치해야 함
+
 oci:
   object-storage:
     region: ${OCI_REGION:}

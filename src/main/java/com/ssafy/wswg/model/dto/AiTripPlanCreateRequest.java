@@ -22,4 +22,5 @@ public class AiTripPlanCreateRequest {
     private Integer radiusMeters;
     private Integer contentTypeId;
     private Integer limit;
+    private TravelMode travelMode;
 }
