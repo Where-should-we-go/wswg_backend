@@ -18,6 +18,8 @@ public interface GroupDao {
 
     int addMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
 
+    int removeMember(@Param("groupId") Long groupId, @Param("userId") Long userId);
+
     List<GroupDto> readGroupsByUserId(Long userId);
 
     GroupDto readGroupById(@Param("groupId") Long groupId, @Param("userId") Long userId);

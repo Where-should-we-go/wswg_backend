@@ -133,4 +133,13 @@ public class GroupController {
         groupService.deleteGroup(groupId, userId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{groupId}/members/{userId}")
+    public ResponseEntity<Void> removeMember(
+            @LoginUserId Long requesterId,
+            @PathVariable Long groupId,
+            @PathVariable Long userId) {
+        groupService.removeMember(groupId, requesterId, userId);
+        return ResponseEntity.noContent().build();
+    }
 }

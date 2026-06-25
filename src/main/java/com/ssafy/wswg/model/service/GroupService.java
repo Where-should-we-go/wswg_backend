@@ -101,6 +101,19 @@ public class GroupService {
                 .orElseThrow(() -> new CommonException(ErrorCode.NOT_FOUND_USER));
     }
 
+    public void removeMember(Long groupId, Long requesterId, Long targetUserId) {
+        validateOwner(groupId, requesterId);
+
+        // 모임장 자신은 내보낼 수 없다(없애려면 모임 삭제를 사용).
+        if (isOwner(groupId, targetUserId)) {
+            throw new CommonException(ErrorCode.CANNOT_REMOVE_GROUP_OWNER);
+        }
+
+        if (groupDao.removeMember(groupId, targetUserId) == 0) {
+            throw new CommonException(ErrorCode.NOT_FOUND_USER);
+        }
+    }
+
     @Transactional
     public GroupInviteLinkDto createInviteLink(Long groupId, Long userId) {
         validateOwner(groupId, userId);

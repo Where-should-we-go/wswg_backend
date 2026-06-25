@@ -20,6 +20,7 @@ import com.ssafy.wswg.model.dao.GroupDao;
 import com.ssafy.wswg.model.dao.TripDao;
 import com.ssafy.wswg.model.dto.GroupDto;
 import com.ssafy.wswg.model.dto.GroupFootprintDto;
+import com.ssafy.wswg.model.dto.GroupJoinRequestStatusDto;
 import com.ssafy.wswg.model.dto.GroupMediaDto;
 import com.ssafy.wswg.model.dto.GroupMediaRequest;
 import com.ssafy.wswg.model.dto.GroupMemberDto;
@@ -190,6 +191,11 @@ class TripMediaServiceTest {
         }
 
         @Override
+        public int removeMember(Long groupId, Long userId) {
+            return 0;
+        }
+
+        @Override
         public List<GroupDto> readGroupsByUserId(Long userId) {
             return List.of();
         }
@@ -222,6 +228,31 @@ class TripMediaServiceTest {
         @Override
         public List<GroupMemberDto> readMembers(Long groupId) {
             return List.of();
+        }
+
+        @Override
+        public int createJoinRequest(Long groupId, Long userId) {
+            return 0;
+        }
+
+        @Override
+        public GroupJoinRequestStatusDto readJoinRequest(Long groupId, Long requestId) {
+            return null;
+        }
+
+        @Override
+        public GroupJoinRequestStatusDto readJoinRequestByUser(Long groupId, Long userId) {
+            return null;
+        }
+
+        @Override
+        public List<GroupJoinRequestStatusDto> readPendingJoinRequests(Long groupId) {
+            return List.of();
+        }
+
+        @Override
+        public int approveJoinRequest(Long requestId) {
+            return 0;
         }
 
         @Override
