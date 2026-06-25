@@ -66,7 +66,7 @@ class AttractionSearchDaoPgTest extends AbstractPostgisIntegrationTest {
     }
 
     private AttractionSearchCondition cond(Integer sido, Integer gugun, List<Integer> ctypes, String keyword) {
-        return new AttractionSearchCondition(sido, gugun, ctypes, keyword);
+        return new AttractionSearchCondition(sido, gugun, ctypes, keyword, false);
     }
 
     private List<AttractionSummaryDto> search(AttractionSearchCondition c) {

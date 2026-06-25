@@ -22,11 +22,13 @@ public class AttractionSearchRequest {
     private Integer gugunCode;
     private List<Integer> contentTypeId;
     private String keyword;
+    /** true면 대표 이미지가 있는 관광지만 조회(예: 카드 그리드용 목록). 미지정 시 false → 전체. */
+    private boolean hasImage = false;
     private int page = 0;
     private int size = 12;
 
     /** 필터 조건만 추려 검색 condition으로 변환(page/size는 서비스에 별도 전달). */
     public AttractionSearchCondition toCondition() {
-        return new AttractionSearchCondition(sidoCode, gugunCode, contentTypeId, keyword);
+        return new AttractionSearchCondition(sidoCode, gugunCode, contentTypeId, keyword, hasImage);
     }
 }

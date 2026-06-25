@@ -23,4 +23,6 @@ public class AttractionSearchCondition {
     private Integer gugunCode;
     private List<Integer> contentTypeIds;
     private String keyword;
+    /** true면 대표 이미지(first_image1)가 있는 관광지만 조회·집계한다(목록·count 동시 적용). */
+    private boolean hasImage;
 }

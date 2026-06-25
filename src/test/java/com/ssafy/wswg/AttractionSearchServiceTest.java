@@ -41,7 +41,7 @@ class AttractionSearchServiceTest {
     AttractionSearchService service;
 
     private AttractionSearchCondition cond(Integer sido, Integer gugun, String keyword) {
-        return new AttractionSearchCondition(sido, gugun, null, keyword);
+        return new AttractionSearchCondition(sido, gugun, null, keyword, false);
     }
 
     @Test
