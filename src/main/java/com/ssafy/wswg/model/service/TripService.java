@@ -112,7 +112,7 @@ public class TripService {
     @Transactional
     public TripDto updateTrip(Long tripId, Long userId, TripUpdateRequestDto request) {
         TripDto existingTrip = findTrip(tripId);
-        validateWritable(existingTrip, userId);
+        validateEditable(existingTrip, userId);
 
         TripDto trip = new TripDto();
         trip.setTripId(tripId);
@@ -170,6 +170,19 @@ public class TripService {
         }
 
         if (trip.getGroupId() != null && groupDao.countGroupOwner(trip.getGroupId(), userId) > 0) {
+            return;
+        }
+
+        throw new CommonException(ErrorCode.TRIP_ACCESS_DENIED);
+    }
+
+    // 날짜·동행 등 여행 내용 편집은 그룹 멤버 누구나 가능(삭제는 validateWritable 로 소유자만).
+    private void validateEditable(TripDto trip, Long userId) {
+        if (trip.getUserId() != null && trip.getUserId().equals(userId)) {
+            return;
+        }
+
+        if (trip.getGroupId() != null && groupDao.countGroupMember(trip.getGroupId(), userId) > 0) {
             return;
         }
 
