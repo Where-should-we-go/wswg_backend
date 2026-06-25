@@ -3,6 +3,7 @@ package com.ssafy.wswg;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
@@ -23,10 +24,13 @@ import com.ssafy.wswg.model.dto.AiTripPlanCreateRequest;
 import com.ssafy.wswg.model.dto.AiTripRecommendationDto;
 import com.ssafy.wswg.model.dto.AiTripRecommendationRequest;
 import com.ssafy.wswg.model.dto.AiTripRecommendationResponse;
+import com.ssafy.wswg.model.dto.RouteLeg;
+import com.ssafy.wswg.model.dto.TravelMode;
 import com.ssafy.wswg.model.dto.TripCreateRequestDto;
 import com.ssafy.wswg.model.dto.TripDto;
 import com.ssafy.wswg.model.service.AiTripPlanService;
 import com.ssafy.wswg.model.service.AiTripRecommendationService;
+import com.ssafy.wswg.model.service.RoutingService;
 import com.ssafy.wswg.model.service.TripService;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +42,9 @@ class AiTripPlanServiceTest {
 
     @Mock
     TripService tripService;
+
+    @Mock
+    RoutingService routingService;
 
     @InjectMocks
     AiTripPlanService aiTripPlanService;
@@ -111,6 +118,85 @@ class AiTripPlanServiceTest {
                 .isInstanceOf(CommonException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_AI_RECOMMENDATION_REQUEST);
+    }
+
+    @Test
+    void createPlan_attachesTravelLegsBetweenSameDaySpots() {
+        AiTripRecommendationResponse recommendationResponse = new AiTripRecommendationResponse();
+        recommendationResponse.setRecommendations(List.of(
+                recommendation(101, "성산일출봉", 0.9),
+                recommendation(102, "섭지코지", 0.8),
+                recommendation(103, "한라산", 0.7),
+                recommendation(104, "협재해변", 0.6)));
+        given(aiTripRecommendationService.recommend(any())).willReturn(recommendationResponse);
+        given(routingService.leg(any(), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(RouteLeg.available(TravelMode.CAR, 12000, 1800, "naver-directions"));
+
+        ArgumentCaptor<TripCreateRequestDto> tripRequestCaptor = ArgumentCaptor.forClass(TripCreateRequestDto.class);
+        given(tripService.createTrip(eq(USER_ID), tripRequestCaptor.capture())).willAnswer(invocation -> {
+            TripDto trip = new TripDto();
+            trip.setData(((TripCreateRequestDto) invocation.getArgument(1)).getData());
+            return trip;
+        });
+
+        // 4개 추천, 2일 일정 -> 청크 배분으로 [0,1]=1일차, [2,3]=2일차
+        AiTripPlanCreateRequest request = new AiTripPlanCreateRequest();
+        request.setStartDate(LocalDate.of(2026, 7, 1));
+        request.setEndDate(LocalDate.of(2026, 7, 2));
+        request.setSessionId("session-1");
+        request.setSelectedCandidateIds(List.of("c1"));
+        request.setTravelMode(TravelMode.CAR);
+
+        aiTripPlanService.createPlan(USER_ID, request);
+
+        JsonNode data = tripRequestCaptor.getValue().getData();
+        JsonNode items = data.get("items");
+        // 같은 날 인접 구간(0->1, 2->3)만 leg가 붙고, 날 경계(1->2)는 붙지 않는다
+        assertThat(items.get(0).has("travelToNext")).isTrue();
+        assertThat(items.get(1).has("travelToNext")).isFalse();
+        assertThat(items.get(2).has("travelToNext")).isTrue();
+        assertThat(items.get(3).has("travelToNext")).isFalse();
+        assertThat(items.get(0).get("travelToNext").get("mode").asText()).isEqualTo("CAR");
+        assertThat(items.get(0).get("travelToNext").get("distanceMeters").asLong()).isEqualTo(12000);
+        assertThat(items.get(0).get("travelToNext").get("durationSeconds").asLong()).isEqualTo(1800);
+        assertThat(data.get("travelMode").asText()).isEqualTo("CAR");
+        assertThat(data.get("travel").get("totalDistanceMeters").asLong()).isEqualTo(24000);
+        assertThat(data.get("travel").get("totalDurationSeconds").asLong()).isEqualTo(3600);
+    }
+
+    @Test
+    void createPlan_failedRoutingStillCreatesPlan() {
+        AiTripRecommendationResponse recommendationResponse = new AiTripRecommendationResponse();
+        recommendationResponse.setRecommendations(List.of(
+                recommendation(201, "광안리", 0.9),
+                recommendation(202, "해운대", 0.8)));
+        given(aiTripRecommendationService.recommend(any())).willReturn(recommendationResponse);
+        given(routingService.leg(any(), anyDouble(), anyDouble(), anyDouble(), anyDouble()))
+                .willReturn(RouteLeg.unavailable(TravelMode.TRANSIT, "odsay"));
+
+        ArgumentCaptor<TripCreateRequestDto> tripRequestCaptor = ArgumentCaptor.forClass(TripCreateRequestDto.class);
+        given(tripService.createTrip(eq(USER_ID), tripRequestCaptor.capture())).willAnswer(invocation -> {
+            TripDto trip = new TripDto();
+            trip.setTripId(20L);
+            trip.setData(((TripCreateRequestDto) invocation.getArgument(1)).getData());
+            return trip;
+        });
+
+        AiTripPlanCreateRequest request = new AiTripPlanCreateRequest();
+        request.setStartDate(LocalDate.of(2026, 7, 1));
+        request.setEndDate(LocalDate.of(2026, 7, 1));
+        request.setSessionId("session-2");
+        request.setSelectedCandidateIds(List.of("c1"));
+        request.setTravelMode(TravelMode.TRANSIT);
+
+        TripDto trip = aiTripPlanService.createPlan(USER_ID, request);
+
+        assertThat(trip).isNotNull();
+        JsonNode data = tripRequestCaptor.getValue().getData();
+        JsonNode leg = data.get("items").get(0).get("travelToNext");
+        assertThat(leg.get("available").asBoolean()).isFalse();
+        assertThat(leg.has("distanceMeters")).isFalse();
+        assertThat(data.get("travel").get("totalDistanceMeters").asLong()).isZero();
     }
 
     private AiTripRecommendationDto recommendation(Integer contentId, String title, Double score) {
